@@ -1,0 +1,123 @@
+ Par ailleurs, ce module accordera une part importante à la pratique : en plus des TPs, les étudiants seront invités à participer à un challenge data (type Kaggle) qui donnera l'opportunité d'appliquer les méthodes vues en cours.
+
+Objectifs / attentes du module :
+- être capable de mettre en place une démarche d'apprentissage supervisé sur un jeu de données conséquent (apprentissage, choix d'hyper-paramètre, validation, comparaison de méthodes…)
+- maîtriser les fondements théoriques de l'apprentissage supervisé (notion de fonction de coût, de risque, minimisation du risque empirique, bornes de risque, compromis biais / complexité d'un modèle)
+- maîtriser différentes techniques d'apprentissage supervisé linéaires (régression linéaire, logistique, analyse discriminante) et non linéaires (SVM à noyau, Forêts Aléatoires, Gradient Boosting...) aussi bien d'un point de vue théorique que pratique.
+
+
+Vous êtes sur la page principale de cette compétitions. Vous trouverez ci-dessous un bref descriptif des objectifs de ce data challenge ainsi que des détails sur l'évaluation des prédictions et le format attendu pour celles-ci. Les données sont décrites plus précisément sur la page "data".
+
+Start
+
+8 days ago
+Close
+a month to go
+Description
+Description du challenge
+L'industrie musicale est en constante évolution, et comprendre ce qui rend un titre populaire est un enjeu majeur pour les artistes, les producteurs et les plateformes de streaming. L'objectif de ce challenge est de développer un modèle capable de prédire la popularité d'un titre musical sur Spotify, en se basant sur ses caractéristiques audio et ses métadonnées.
+
+Objectif :
+Prédire la variable popularity (une note de 0 à 100) à partir des caractéristiques audio et des métadonnées des titres.
+
+Données
+Les données sont disponibles et présentées dans l'onglet "data".
+
+Evaluation
+Métrique d'évaluation :
+L'évaluation est réalisée à partir du coefficient de détermination du R2.
+
+Soumission des prédictions
+Pour chaque valeur de row_id dans le dataset de test, vous devez prédire la classe correspondante sous forme d'un entier (0: Check-Out, 1: Cancel, 2: No-Show). Le tout doit être enregistré dans un fichier csv (séparateur ',').
+
+row_id, popularity
+2,45.5
+8,67.1
+10,42
+etc.
+
+##
+
+Spotify : prédire la popularité d'un titre
+Prédiction de la popularité d'une musique à partir de différents descripteurs.
+
+
+Dataset Description
+Spotify dataset
+Les données peuvent être téléchargées depuis cette page. La variable à prédire est le score de popularité du titre musical. La colonne "row_id" n'apporte aucune information, elle doit néanmoins être conservée pour la soumission puisqu'elle porte l'identifiant du titre et servira donc à comparer le vrai score au score prédit.
+
+Les variables disponibles sont décrites ci-dessous.
+
+Variables
+Variable	Type	Description
+popularity	Numérique (0-100)	Variable cible : Score de popularité du titre sur Spotify. Plus le score est élevé, plus le titre est populaire.
+duration_ms	Numérique	Durée du titre en millisecondes.
+explicit	Binaire (0/1)	Indique si le titre contient des paroles explicites (1) ou non (0).
+danceability	Numérique (0.0-1.0)	Mesure de la facilité à danser sur le titre. Une valeur proche de 1.0 indique un titre très dansant.
+energy	Numérique (0.0-1.0)	Mesure de l'intensité et de l'activité du titre. Une valeur proche de 1.0 indique un titre énergique.
+key	Catégorielle (0-11)	Tonalité globale du titre, représentée par un entier (0 = Do, 1 = Do#, …, 11 = Si).
+loudness	Numérique (dB)	Niveau sonore moyen du titre en décibels (dB). Les valeurs sont généralement comprises entre -60 et 0 dB.
+mode	Binaire (0/1)	Indique si le titre est en mode majeur (1) ou mineur (0).
+speechiness	Numérique (0.0-1.0)	Présence de paroles dans le titre. Une valeur proche de 1.0 indique un titre très parlé (ex: podcast, rap).
+acousticness	Numérique (0.0-1.0)	Mesure de la probabilité que le titre soit acoustique. Une valeur proche de 1.0 indique un titre très acoustique.
+instrumentalness	Numérique (0.0-1.0)	Mesure de l'absence de voix dans le titre. Une valeur proche de 1.0 indique un titre instrumental.
+liveness	Numérique (0.0-1.0)	Probabilité que le titre ait été enregistré en public. Une valeur proche de 1.0 indique une forte présence de public.
+valence	Numérique (0.0-1.0)	Mesure de la positivité musicale du titre. Une valeur proche de 1.0 indique un titre joyeux et positif.
+tempo	Numérique (BPM)	Tempo du titre en battements par minute (BPM).
+time_signature	Numérique	Signature rythmique du titre (ex: 4/4, 3/4). La plupart des titres ont une signature de 4.
+track_genre	Catégorielle	Genre musical principal du titre (ex: "Pop", "Rock", "Hip-Hop", "Electronic", etc.).
+Les fichiers
+train_data.csv - les données d'entraînement (la colonne à prédire est renseignée)
+test_data.csv - les données de tests (la colonne à prédire a été retirée)
+naive_submission.csv - un exemple de soumission (contenant une prédiction de popularité constante naïve). Vos soumissions doivent respecter ce format (notez en particulier que la colonne "row_id" doit être présente afin de savoir quelle prédiction est associée à quel objet)
+Files
+3 files
+
+Size
+11.38 MB
+
+Type
+csv
+
+License
+MIT
+
+naive_submission.csv(713.28 kB)
+
+2 of 2 columns
+
+
+row_id
+
+popularity
+Label	Count
+2.00 - 5701.85	1,414
+5701.85 - 11401.70	1,451
+11401.70 - 17101.55	1,446
+17101.55 - 22801.40	1,397
+22801.40 - 28501.25	1,465
+28501.25 - 34201.10	1,514
+34201.10 - 39900.95	1,419
+39900.95 - 45600.80	1,427
+45600.80 - 51300.65	1,375
+51300.65 - 57000.50	1,391
+57000.50 - 62700.35	1,443
+62700.35 - 68400.20	1,401
+68400.20 - 74100.05	1,346
+74100.05 - 79799.90	1,410
+79799.90 - 85499.75	1,439
+85499.75 - 91199.60	1,387
+91199.60 - 96899.45	1,424
+96899.45 - 102599.30	1,481
+102599.30 - 108299.15	1,464
+108299.15 - 113999.00	1,406
+2
+114k
+Label	Count
+33.18 - 33.18	28,500
+33.2
+33.2
+76250
+33.184877192982455
+36340
+33.184877192982455
