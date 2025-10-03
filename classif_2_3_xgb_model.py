@@ -45,7 +45,7 @@ print(XGBClassifier.__module__)
 #______________________________________________________________________________
 #______________________________________________________________________________
 
-n_estimators_list = [10,50,100,200,300,500,700]
+n_estimators_list = [10,50,100,200,300,500,700,1000,1400,1800,2200,2600,3000,4000,5000]
 
 f1_list_train = []
 f1_list_test = []
@@ -72,12 +72,12 @@ plt.show()
 #______________________________________________________________________________
 #______________________________________________________________________________
 
-n_learning_rate_list = [0.1,0.3,0.9]
+n_learning_rate_list = [0.02, 0.05,0.1,0.3,0.9]
 
 f1_list_train = []
 f1_list_test = []
 for n_learning_rate in n_learning_rate_list:
-    xgb_model = XGBClassifier (n_estimators = 300, learning_rate = n_learning_rate,verbosity = 1, random_state = RANDOM_STATE)
+    xgb_model = XGBClassifier (n_estimators = 500, learning_rate = n_learning_rate,verbosity = 1, random_state = RANDOM_STATE)
     xgb_model.fit(X_train_fit,y_train_fit, eval_set = [(X_train_eval,y_train_eval)])#, early_stopping_rounds = 50)
 
     predictions_train = xgb_model.predict(X_train) ## The predicted values for the train dataset
@@ -96,11 +96,37 @@ plt.plot(f1_list_test)
 plt.legend(['Train','Test'])
 plt.show()
 
+#______________________________________________________________________________
+#______________________________________________________________________________
+
+max_depth_list = [3,4,6,8,10]
+
+f1_list_train = []
+f1_list_test = []
+for n_estmax_dmax_depthepthimators in max_depth_list:
+    xgb_model = XGBClassifier (n_estimators = n_estimators, max_depth = max_depth ,verbosity = 1, random_state = RANDOM_STATE)
+    xgb_model.fit(X_train_fit,y_train_fit, eval_set = [(X_train_eval,y_train_eval)])#, early_stopping_rounds = 50)
+
+    predictions_train = xgb_model.predict(X_train) ## The predicted values for the train dataset
+    predictions_test = xgb_model.predict(X_test) ## The predicted values for the test dataset
+    f1_train = f1_score(y_train,predictions_train,average="macro")
+    f1_test = f1_score(y_test,predictions_test,average="macro")
+    f1_list_train.append(f1_train)
+    f1_list_test.append(f1_test)
+
+plt.title('Train x Test metrics')
+plt.xlabel('min_samples_split')
+plt.ylabel('f1')
+plt.xticks(ticks = range(len(n_estimators_list )),labels=n_estimators_list) 
+plt.plot(f1_list_train)
+plt.plot(f1_list_test)
+plt.legend(['Train','Test'])
+plt.show()
 
 #______________________________________________________________________________
 #______________________________________________________________________________
 
-xgb_model = XGBClassifier (n_estimators = 300, learning_rate = 0.3 ,verbosity = 1, random_state = RANDOM_STATE)
+xgb_model = XGBClassifier (n_estimators = 1000, learning_rate = 0.1 ,verbosity = 1, random_state = RANDOM_STATE)
 xgb_model.fit(X_train_fit,y_train_fit, eval_set = [(X_train_eval,y_train_eval)])#, early_stopping_rounds = 50)
 
 

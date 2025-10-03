@@ -26,6 +26,8 @@ df_c = pd.get_dummies(data = df, \
                          columns = liste_var_categ)
 
 
+
+
 var = [x for x in df_c.columns if x not in target] ## Removing our target variable
 
 X_train, X_test, y_train, y_test = train_test_split(df_c[var], df[target],
