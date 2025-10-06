@@ -1,74 +1,186 @@
 # Spotify Popularity Prediction Project
 
-Ce projet a pour but de prédire la popularité d'un titre musical Spotify en utilisant des techniques d'apprentissage supervisé.
+Prédiction de la popularité d'un titre musical Spotify (0-100) en utilisant l'apprentissage supervisé.
+
+**Métrique d'évaluation:** Coefficient de détermination (R²)
+**Meilleur modèle:** Random Forest optimisé (R² = 0.472)
 
 ---
 
 ## Structure du Projet
 
-Le projet a été restructuré pour suivre les bonnes pratiques de développement, en séparant les différentes logiques en modules distincts.
-
--   `CONTEXT.md`: Fichier de contexte décrivant les objectifs et les données du challenge.
--   `rapport.md`: Rapport d'analyse détaillant la démarche, les expérimentations et les résultats.
--   `requirements.txt`: Liste des dépendances Python nécessaires pour exécuter le projet.
--   `run_all_models.ps1`: Script PowerShell pour lancer l'entraînement de tous les modèles définis.
--   `train.py`: Script principal pour entraîner un modèle spécifique.
--   `src/`: Répertoire contenant le code source modulaire.
-    -   `data_preparation.py`: Fonctions pour charger, nettoyer et préparer les données.
-    -   `pipelines.py`: Fonctions pour construire les pipelines de prétraitement des données.
+```
+spotify-predire-la-popularite-dun-titre/
+├── src/                    # Modules Python
+│   ├── data_preparation.py # Préparation des données
+│   └── pipelines.py        # Pipelines de prétraitement
+├── docs/                   # Documentation
+│   ├── CONTEXT.md          # Contexte du challenge
+│   └── rapport.md          # Rapport complet
+├── results/                # Résultats et soumissions
+│   └── submission_polynomial_ridge.csv
+├── figures/                # Graphiques EDA
+│   ├── eda_popularity.png
+│   ├── eda_correlation.png
+│   ├── eda_genres.png
+│   └── eda_distributions.png
+├── train_final.py          # Script d'entraînement
+├── evaluate_final.py       # Évaluation avec validation croisée
+├── requirements.txt        # Dépendances Python
+├── train_data.csv          # Données (85,500 observations)
+└── test_data.csv           # Données (28,500 observations)
+```
 
 ---
 
 ## Installation
 
-Pour utiliser ce projet, suivez les étapes ci-dessous.
-
-### 1. Créer un Environnement Virtuel
-
-Il est fortement recommandé d'utiliser un environnement virtuel pour isoler les dépendances du projet.
-
-```powershell
-# Crée un environnement virtuel nommé 'venv'
-python -m venv venv
-
-# Active l'environnement. Cette commande doit être lancée à chaque nouvelle session de terminal.
-.\venv\Scripts\Activate.ps1
-```
-
-### 2. Installer les Dépendances
-
-Une fois l'environnement activé, installez toutes les librairies requises à l'aide du fichier `requirements.txt`.
-
-```powershell
+```bash
 pip install -r requirements.txt
 ```
+
+**Dépendances optionnelles** (pour LightGBM et XGBoost):
+```bash
+# LightGBM (léger, ~1.5 MB)
+python -m pip install lightgbm
+
+# XGBoost (lourd, ~57 MB)
+python -m pip install xgboost
+```
+
+**Note:** Les modèles `polynomial_ridge` et `random_forest` fonctionnent sans ces dépendances.
 
 ---
 
 ## Utilisation
 
-### Entraîner un Modèle Spécifique
+### 1. Évaluer les modèles (recommandé)
 
-Vous pouvez entraîner un seul modèle en utilisant le script `train.py` avec l'argument `--model_name`.
+Comparer les performances avec validation croisée 3-fold :
 
-Les noms de modèles disponibles sont :
-- `linear` (Régression Linéaire)
-- `ridge` (Régression Ridge)
-- `random_forest` (Forêt Aléatoire)
-- `gradient_boosting` (Gradient Boosting)
-- `polynomial_ridge` (Régression Ridge avec features polynomiales)
-
-**Exemple :**
-```powershell
-python train.py --model_name polynomial_ridge
+```bash
+python evaluate_final.py
 ```
 
-### Entraîner Tous les Modèles
+**Sortie:**
+- Résultats détaillés pour chaque modèle
+- Classement par R²
+- Recommandation du meilleur modèle
+- Fichier `results/evaluation_final.csv`
 
-Pour entraîner tous les modèles les uns après les autres et générer tous les fichiers de soumission, exécutez le script PowerShell `run_all_models.ps1`.
+### 2. Entraîner un modèle
 
-```powershell
-.\run_all_models.ps1
+Entraîner un modèle spécifique et générer une soumission :
+
+```bash
+python train_final.py --model <nom_du_modele>
 ```
 
-Chaque exécution générera un fichier `submission_<nom_du_modèle>.csv` à la racine du projet, prêt à être soumis sur Kaggle.
+**Modèles disponibles:**
+- `polynomial_ridge` : Ridge avec features polynomiales (R² = 0.264)
+- `random_forest` : Random Forest optimisé (R² = 0.472) - **MEILLEUR**
+- `lightgbm` : LightGBM (rapide et efficace)
+- `xgboost` : XGBoost (régularisation L1/L2)
+
+**Exemples:**
+```bash
+# Meilleur modèle
+python train_final.py --model random_forest
+
+# Modèle le plus rapide
+python train_final.py --model lightgbm
+```
+
+**Sortie:** Fichier `submission_<nom_du_modele>.csv` prêt pour Kaggle
+
+---
+
+## Résultats
+
+### Performances (Validation Croisée)
+
+| Modèle | R² (test) | RMSE | Notes |
+|--------|-----------|------|-------|
+| **Random Forest** | **0.472** | 16.20 | Meilleur, attention sur-apprentissage |
+| Ridge Polynomial | 0.264 | 19.14 | Stable, pas de sur-apprentissage |
+| LightGBM | À évaluer | - | Rapide, efficace |
+| XGBoost | À évaluer | - | Régularisation forte |
+
+**Meilleur modèle:** Random Forest optimisé
+- **Configuration:** 500 arbres, max_depth=None, max_features=0.7
+- **Amélioration:** +210% vs baseline (0.152 → 0.472)
+- **Attention:** Sur-apprentissage modéré (R² train = 0.756)
+
+---
+
+## Méthodologie
+
+### 1. Analyse Exploratoire (EDA)
+- 85,500 observations, aucune valeur manquante
+- Corrélations très faibles avec popularité (max |r| = 0.094)
+- 114 genres musicaux bien équilibrés
+- Features asymétriques (duration_ms, speechiness, etc.)
+
+### 2. Prétraitement
+- **Encodage cyclique** pour `key`: sin(2π×key/12), cos(2π×key/12)
+- **StandardScaler** pour features numériques
+- **OneHotEncoder** pour `track_genre` (114 genres)
+- **Features polynomiales** (degree=2) pour Ridge uniquement
+
+### 3. Modèles Sélectionnés
+
+**Ridge Polynomial:**
+- Features polynomiales + régularisation L2
+- Pas de sur-apprentissage, stable et rapide
+
+**Random Forest (optimisé):**
+- Hyperparamètres optimisés par RandomizedSearchCV
+- 500 arbres, profondeur illimitée
+- Meilleure performance mais sur-apprentissage modéré
+
+**LightGBM:**
+- Implémentation optimisée du Gradient Boosting
+- Très rapide, gestion efficace des catégorielles
+- Paramètres: 300 estimators, lr=0.05, max_depth=7
+
+**XGBoost:**
+- Gradient Boosting avec régularisation L1/L2
+- Excellentes performances sur données tabulaires
+- Paramètres: 300 estimators, lr=0.05, max_depth=6
+
+### 4. Évaluation
+- **Validation croisée 3-fold** (allégée pour rapidité)
+- **Métriques:** R², RMSE, écart train-test
+- **Détection du sur-apprentissage**
+
+---
+
+## Choix Techniques
+
+### Pourquoi 3-fold au lieu de 5-fold ?
+- **Rapidité:** 40% plus rapide
+- **Suffisant:** Dataset large (85,500 observations)
+- **Compromis:** Précision vs temps de calcul
+
+### Pourquoi Random Forest avec 500 arbres ?
+- **Optimisation:** Trouvé par RandomizedSearchCV (50 itérations)
+- **Performance:** R² = 0.472 (meilleur résultat)
+- **Compromis:** Temps d'entraînement acceptable (~5 min)
+
+### Pourquoi LightGBM et XGBoost ?
+- **Efficacité:** Plus rapides que sklearn GradientBoosting
+- **Performance:** Souvent meilleurs sur données tabulaires
+- **Régularisation:** Meilleure gestion du sur-apprentissage
+
+---
+
+## Documentation
+
+- **`docs/CONTEXT.md`** : Contexte et objectifs du challenge
+- **`docs/rapport.md`** : Rapport complet avec méthodologie et résultats
+
+---
+
+## Auteur
+
+Grégoire - M2 Apprentissage Supervisé (2025)
