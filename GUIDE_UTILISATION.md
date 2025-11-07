@@ -113,55 +113,6 @@ python train_final.py --model xgboost
 
 ---
 
-## 🔧 Résolution de Problèmes
-
-### Erreur: "ModuleNotFoundError: No module named 'lightgbm'"
-
-**Solution:**
-```bash
-python -m pip install lightgbm
-```
-
-Ou utilisez les modèles de base:
-```bash
-python train_final.py --model random_forest
-```
-
-### Erreur: "ModuleNotFoundError: No module named 'xgboost'"
-
-**Solution:**
-```bash
-python -m pip install xgboost
-```
-
-Ou utilisez les modèles de base:
-```bash
-python train_final.py --model random_forest
-```
-
-### Erreur: "Fatal error in launcher"
-
-**Cause:** Problème avec pip
-
-**Solution:** Utiliser `python -m pip` au lieu de `pip`:
-```bash
-python -m pip install lightgbm
-```
-
-### Installation de XGBoost annulée (fichier trop lourd)
-
-**Solution 1:** Réessayer l'installation
-```bash
-python -m pip install xgboost
-```
-
-**Solution 2:** Utiliser Random Forest (meilleur résultat de toute façon)
-```bash
-python train_final.py --model random_forest
-```
-
----
-
 ## 📊 Comparaison des Modèles
 
 ### Random Forest vs Ridge Polynomial

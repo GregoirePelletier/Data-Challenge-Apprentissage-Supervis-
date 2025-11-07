@@ -14,18 +14,46 @@ import numpy as np
 from sklearn.pipeline import Pipeline
 from sklearn.linear_model import RidgeCV
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.model_selection import RandomizedSearchCV
+from sklearn.metrics import r2_score, make_scorer
+from xgboost import XGBRegressor
+from lightgbm import LGBMRegressor
+import joblib
 import warnings
 warnings.filterwarnings('ignore')
 
 # Import des modules personnalisés
 from src.data_preparation import (
-    load_data, 
-    initial_feature_engineering, 
+    load_data,
+    initial_feature_engineering,
     get_features_and_target,
     get_test_features,
     get_feature_names
 )
 from src.pipelines import create_simple_preprocessor, create_polynomial_preprocessor
+
+# Grilles de paramètres pour RandomizedSearchCV
+param_grid_xgboost = {
+    'regressor__n_estimators':,
+    'regressor__learning_rate': [0.01, 0.05, 0.1, 0.2],
+    'regressor__max_depth':,
+    'regressor__subsample': [0.6, 0.8, 1.0],
+    'regressor__colsample_bytree': [0.6, 0.8, 1.0],
+    'regressor__gamma': [0, 0.1, 0.2],
+    'regressor__reg_alpha': [0, 0.01, 0.1, 0.5],
+    'regressor__reg_lambda': [0.5, 1, 1.5]
+}
+
+param_grid_lightgbm = {
+    'regressor__n_estimators':,
+    'regressor__learning_rate': [0.01, 0.05, 0.1, 0.2],
+    'regressor__max_depth':,
+    'regressor__num_leaves':,
+    'regressor__subsample': [0.6, 0.8, 1.0],
+    'regressor__colsample_bytree': [0.6, 0.8, 1.0],
+    'regressor__reg_alpha': [0, 0.01, 0.1, 0.5],
+    'regressor__reg_lambda': [0.5, 1, 1.5]
+}
 
 def get_model_and_preprocessor(model_name, numeric_features, categorical_features):
     """

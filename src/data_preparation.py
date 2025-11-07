@@ -88,6 +88,26 @@ def initial_feature_engineering(df, apply_log_transform=False, create_interactio
         if 'valence' in df.columns and 'energy' in df.columns:
             df['valence_energy'] = df['valence'] * df['energy']
 
+        # Danceability × valence (titres dansants et positifs)
+        if 'danceability' in df.columns and 'valence' in df.columns:
+            df['danceability_valence'] = df['danceability'] * df['valence']
+
+        # Energy × tempo (énergie du rythme)
+        if 'energy' in df.columns and 'tempo' in df.columns:
+            df['energy_tempo'] = df['energy'] * df['tempo']
+
+        # Loudness × tempo (intensité du rythme)
+        if 'loudness' in df.columns and 'tempo' in df.columns:
+            df['loudness_tempo'] = df['loudness'] * df['tempo']
+
+        # Acousticness × speechiness (musique acoustique parlée)
+        if 'acousticness' in df.columns and 'speechiness' in df.columns:
+            df['acoustic_speechiness'] = df['acousticness'] * df['speechiness']
+
+        # Instrumentalness × tempo (rythme instrumental)
+        if 'instrumentalness' in df.columns and 'tempo' in df.columns:
+            df['instrumental_tempo'] = df['instrumentalness'] * df['tempo']
+
     return df
 
 def get_features_and_target(train_df):
@@ -136,7 +156,9 @@ def get_feature_names(include_log_features=False, include_interactions=False):
     if include_interactions:
         interaction_features = [
             'energy_loudness', 'danceability_energy',
-            'acoustic_instrumental', 'speech_density', 'valence_energy'
+            'acoustic_instrumental', 'speech_density', 'valence_energy',
+            'danceability_valence', 'energy_tempo', 'loudness_tempo',
+            'acoustic_speechiness', 'instrumental_tempo'
         ]
         numeric_features.extend(interaction_features)
 
