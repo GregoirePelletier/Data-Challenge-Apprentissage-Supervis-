@@ -6,6 +6,8 @@ Modèles disponibles:
 - random_forest: Random Forest optimisé (R² = 0.472)
 - lightgbm: LightGBM (rapide et efficace)
 - xgboost: XGBoost (régularisation L1/L2)
+- lightgbm_search: LightGBM avec RandomizedSearchCV
+- xgboost_search: XGBoost avec RandomizedSearchCV
 """
 
 import argparse
@@ -32,11 +34,15 @@ from src.data_preparation import (
 )
 from src.pipelines import create_simple_preprocessor, create_polynomial_preprocessor
 
+# Définition du scorer R² pour RandomizedSearchCV
+r2_scorer = make_scorer(r2_score)
+
 # Grilles de paramètres pour RandomizedSearchCV
+# Complétées avec des plages de valeurs courantes pour la recherche
 param_grid_xgboost = {
-    'regressor__n_estimators':,
+    'regressor__n_estimators': [100, 300, 500, 700],
     'regressor__learning_rate': [0.01, 0.05, 0.1, 0.2],
-    'regressor__max_depth':,
+    'regressor__max_depth': [3, 5, 7, 9],
     'regressor__subsample': [0.6, 0.8, 1.0],
     'regressor__colsample_bytree': [0.6, 0.8, 1.0],
     'regressor__gamma': [0, 0.1, 0.2],
@@ -45,10 +51,10 @@ param_grid_xgboost = {
 }
 
 param_grid_lightgbm = {
-    'regressor__n_estimators':,
+    'regressor__n_estimators': [100, 300, 500, 700],
     'regressor__learning_rate': [0.01, 0.05, 0.1, 0.2],
-    'regressor__max_depth':,
-    'regressor__num_leaves':,
+    'regressor__max_depth': [5, 7, 9, 12],
+    'regressor__num_leaves': [15, 31, 63, 127],
     'regressor__subsample': [0.6, 0.8, 1.0],
     'regressor__colsample_bytree': [0.6, 0.8, 1.0],
     'regressor__reg_alpha': [0, 0.01, 0.1, 0.5],
@@ -105,6 +111,30 @@ def get_model_and_preprocessor(model_name, numeric_features, categorical_feature
             verbose=-1
         )
         preprocessor = create_simple_preprocessor(numeric_features, categorical_features)
+
+    elif model_name == "lightgbm_search":
+        try:
+            from lightgbm import LGBMRegressor
+        except ImportError:
+            raise ImportError(
+                "LightGBM n'est pas installé. Installez-le avec: pip install lightgbm"
+            )
+        
+        print("Modèle: LightGBM (Recherche Hyperparamètres)")
+        print("Configuration: RandomizedSearchCV (n_iter=10, cv=3, scoring=R²)")
+        
+        base_model = LGBMRegressor(random_state=42, n_jobs=-1, verbose=-1)
+        model = RandomizedSearchCV(
+            estimator=base_model,
+            param_distributions=param_grid_lightgbm,
+            n_iter=10,
+            scoring=r2_scorer,
+            cv=3,
+            random_state=42,
+            n_jobs=-1,
+            verbose=1
+        )
+        preprocessor = create_simple_preprocessor(numeric_features, categorical_features)
         
     elif model_name == "xgboost":
         try:
@@ -129,11 +159,35 @@ def get_model_and_preprocessor(model_name, numeric_features, categorical_feature
             verbosity=0
         )
         preprocessor = create_simple_preprocessor(numeric_features, categorical_features)
+
+    elif model_name == "xgboost_search":
+        try:
+            from xgboost import XGBRegressor
+        except ImportError:
+            raise ImportError(
+                "XGBoost n'est pas installé. Installez-le avec: pip install xgboost"
+            )
+        
+        print("Modèle: XGBoost (Recherche Hyperparamètres)")
+        print("Configuration: RandomizedSearchCV (n_iter=10, cv=3, scoring=R²)")
+        
+        base_model = XGBRegressor(random_state=42, n_jobs=-1, verbosity=0)
+        model = RandomizedSearchCV(
+            estimator=base_model,
+            param_distributions=param_grid_xgboost,
+            n_iter=10,
+            scoring=r2_scorer,
+            cv=3,
+            random_state=42,
+            n_jobs=-1,
+            verbose=1
+        )
+        preprocessor = create_simple_preprocessor(numeric_features, categorical_features)
         
     else:
         raise ValueError(
             f"Modèle '{model_name}' non reconnu.\n"
-            f"Modèles valides: polynomial_ridge, random_forest, lightgbm, xgboost"
+            f"Modèles valides: polynomial_ridge, random_forest, lightgbm, xgboost, lightgbm_search, xgboost_search"
         )
     
     return model, preprocessor
@@ -187,6 +241,23 @@ def main(model_name):
     print("   ✓ Entraînement terminé")
     print()
 
+    # Afficher les hyperparamètres optimaux si RandomizedSearchCV a été utilisé
+    if 'search' in model_name:
+        best_r2 = full_pipeline.best_score_
+        best_params = full_pipeline.best_params_
+        print("   ✓ Résultats de la recherche (RandomizedSearchCV):")
+        print(f"   Meilleur R² (CV): {best_r2:.4f}")
+        print("   Meilleurs paramètres:")
+        for k, v in best_params.items():
+            print(f"     - {k}: {v}")
+        print()
+        
+        # Enregistrer le meilleur modèle trouvé par RandomizedSearchCV
+        model_filename = f"results/best_model_{model_name}.joblib"
+        joblib.dump(full_pipeline.best_estimator_, model_filename)
+        print(f"   ✓ Meilleur modèle enregistré sous '{model_filename}'")
+        print()
+
     # Afficher l'alpha optimal pour Ridge
     if model_name == "polynomial_ridge":
         best_alpha = full_pipeline.named_steps['regressor'].alpha_
@@ -204,7 +275,7 @@ def main(model_name):
     # 6. Créer le fichier de soumission
     print("6. Création du fichier de soumission...")
     submission_df = pd.DataFrame({
-        'row_id': test_row_ids, 
+        'row_id': test_row_ids,
         'popularity': predictions
     })
     filename = f"submission_{model_name}.csv"
@@ -232,9 +303,8 @@ if __name__ == "__main__":
         "--model", 
         type=str, 
         required=True, 
-        choices=["polynomial_ridge", "random_forest", "lightgbm", "xgboost"],
-        help="Le modèle à entraîner"
+        choices=["polynomial_ridge", "random_forest", "lightgbm", "xgboost", "lightgbm_search", "xgboost_search"],
+        help="Le modèle à entraîner. Les options '_search' lancent une recherche d'hyperparamètres."
     )
     args = parser.parse_args()
     main(args.model)
-
