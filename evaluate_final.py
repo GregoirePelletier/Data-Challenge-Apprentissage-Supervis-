@@ -6,20 +6,35 @@ Script d'évaluation avec validation croisée pour comparer les modèles.
 
 import pandas as pd
 import numpy as np
+import pickle
+import os
 from sklearn.pipeline import Pipeline
 from sklearn.model_selection import cross_validate
 from sklearn.linear_model import RidgeCV
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import r2_score
 import warnings
 warnings.filterwarnings('ignore')
 
 from src.data_preparation import (
-    load_data, 
-    initial_feature_engineering, 
+    load_data,
+    initial_feature_engineering,
     get_features_and_target,
     get_feature_names
 )
 from src.pipelines import create_simple_preprocessor, create_polynomial_preprocessor
+
+def load_optimized_model(model_name):
+    """
+    Charge un modèle optimisé sérialisé.
+    """
+    model_path = os.path.join('results', f'{model_name}_best_model.pkl')
+    if not os.path.exists(model_path):
+        print(f"   ⚠️  Modèle {model_name} non trouvé à {model_path}. Veuillez exécuter train_final.py d'abord.")
+        return None
+    with open(model_path, 'rb') as f:
+        model = pickle.load(f)
+    return model
 
 def evaluate_model(pipeline, X, y, model_name, cv_folds=3):
     """

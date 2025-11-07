@@ -127,9 +127,9 @@ def get_model_and_preprocessor(model_name, numeric_features, categorical_feature
         model = RandomizedSearchCV(
             estimator=base_model,
             param_distributions=param_grid_lightgbm,
-            n_iter=10,
+            n_iter=10, # Pour un test rapide, augmenter pour une recherche plus approfondie
             scoring=r2_scorer,
-            cv=3,
+            cv=5, # Utilisation de 5-fold cross-validation
             random_state=42,
             n_jobs=-1,
             verbose=1
@@ -175,9 +175,9 @@ def get_model_and_preprocessor(model_name, numeric_features, categorical_feature
         model = RandomizedSearchCV(
             estimator=base_model,
             param_distributions=param_grid_xgboost,
-            n_iter=10,
+            n_iter=10, # Pour un test rapide, augmenter pour une recherche plus approfondie
             scoring=r2_scorer,
-            cv=3,
+            cv=5, # Utilisation de 5-fold cross-validation
             random_state=42,
             n_jobs=-1,
             verbose=1
@@ -203,15 +203,20 @@ def main(model_name):
 
     # 1. Chargement et préparation des données
     print("1. Chargement des données...")
+    
     train_df, test_df = load_data()
     
-    train_df = initial_feature_engineering(train_df)
-    test_df = initial_feature_engineering(test_df)
+    # Activation de la transformation logarithmique et des interactions
+    train_df = initial_feature_engineering(train_df, apply_log_transform=True, create_interactions=True)
+    test_df = initial_feature_engineering(test_df, apply_log_transform=True, create_interactions=True)
     
     X_train, y_train = get_features_and_target(train_df)
     X_test, test_row_ids = get_test_features(test_df)
     
-    numeric_features, categorical_features = get_feature_names()
+        # Mise à jour de la liste des features pour inclure les ajouts
+    numeric_features, categorical_features = get_feature_names(
+        include_log_features=True, 
+        include_interactions=True)
     
     print(f"   Observations train: {len(X_train):,}")
     print(f"   Observations test: {len(X_test):,}")
