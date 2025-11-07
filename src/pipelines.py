@@ -1,20 +1,24 @@
-from sklearn.preprocessing import StandardScaler, OneHotEncoder, PolynomialFeatures, RobustScaler, MinMaxScaler
+from sklearn.preprocessing import StandardScaler, OneHotEncoder, PolynomialFeatures, RobustScaler, MinMaxScaler, TargetEncoder
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from src.data_preparation import OutlierClipper
 
-def create_simple_preprocessor(numeric_features, categorical_features, scaler_type='standard'):
+# MODIFICATION : Changer la signature et le contenu de create_simple_preprocessor
+def create_simple_preprocessor(numeric_features, ohe_features, target_encode_features, scaler_type='standard'):
     """
     Crée un pipeline de prétraitement simple :
     - Standardisation pour les variables numériques.
-    - One-Hot Encoding pour les variables catégorielles.
+    - One-Hot Encoding pour les catégorielles à faible cardinalité.
+    - Target Encoding pour les catégorielles à forte cardinalité (ex: genre).
 
     Parameters:
     -----------
     numeric_features : list
         Liste des noms de features numériques
-    categorical_features : list
-        Liste des noms de features catégorielles
+    ohe_features : list
+        Liste des noms de features pour One-Hot Encoding
+    target_encode_features : list
+        Liste des noms de features pour Target Encoding
     scaler_type : str, default='standard'
         Type de scaler à utiliser: 'standard', 'robust', 'minmax'
 
@@ -22,6 +26,7 @@ def create_simple_preprocessor(numeric_features, categorical_features, scaler_ty
     --------
     ColumnTransformer : Le préprocesseur configuré
     """
+    
     # Choisir le scaler approprié
     if scaler_type == 'standard':
         numeric_transformer = StandardScaler()
@@ -33,14 +38,20 @@ def create_simple_preprocessor(numeric_features, categorical_features, scaler_ty
     else:
         raise ValueError(f"scaler_type '{scaler_type}' non reconnu. Utilisez 'standard', 'robust' ou 'minmax'.")
 
-    categorical_transformer = OneHotEncoder(handle_unknown='ignore', sparse_output=False)
+    # Transformeur One-Hot pour les features simples
+    ohe_transformer = OneHotEncoder(handle_unknown='ignore', sparse_output=False)
+    
+    # Transformeur TargetEncoder pour 'track_genre'
+    # 'smooth' gère les genres rares et évite la division par zéro
+    target_transformer = TargetEncoder(target_type='continuous', smooth='auto', random_state=42)
 
     preprocessor = ColumnTransformer(
         transformers=[
             ('num', numeric_transformer, numeric_features),
-            ('cat', categorical_transformer, categorical_features)
+            ('ohe', ohe_transformer, ohe_features),
+            ('target_enc', target_transformer, target_encode_features)
         ],
-        remainder='passthrough'
+        remainder='passthrough' # 'passthrough' est crucial
     )
     return preprocessor
 

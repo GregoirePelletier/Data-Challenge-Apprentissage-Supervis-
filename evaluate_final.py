@@ -6,7 +6,7 @@ Script d'évaluation avec validation croisée pour comparer les modèles.
 
 import pandas as pd
 import numpy as np
-import pickle
+import joblib
 import os
 from sklearn.pipeline import Pipeline
 from sklearn.model_selection import cross_validate
@@ -33,7 +33,7 @@ def load_optimized_model(model_name):
         print(f"   ⚠️  Modèle {model_name} non trouvé à {model_path}. Veuillez exécuter train_final.py d'abord.")
         return None
     with open(model_path, 'rb') as f:
-        model = pickle.load(f)
+        model = joblib.load(f)
     return model
 
 def evaluate_model(pipeline, X, y, model_name, cv_folds=3):
@@ -93,8 +93,14 @@ def main():
     print("1. Chargement des données...")
     train_df, _ = load_data()
     train_df = initial_feature_engineering(train_df)
+    # Activation de la transformation logarithmique et des interactions
+    train_df = initial_feature_engineering(train_df, apply_log_transform=True, create_interactions=True)
     X_train, y_train = get_features_and_target(train_df)
-    numeric_features, categorical_features = get_feature_names()
+
+    # Mise à jour de la liste des features pour inclure les ajouts
+    numeric_features, categorical_features = get_feature_names(
+        include_log_features=True, 
+        include_interactions=True)
     
     print(f"   Observations: {len(X_train):,}")
     print(f"   Features: {X_train.shape[1]}")

@@ -138,25 +138,29 @@ RandomForestRegressor(
 
 -----
 
-## 6\. Itération 4 : Feature Engineering Avancé (Testé)
+## 6. Itération 4 : Feature Engineering Avancé (Implémenté)
+Hypothèse : Le score du Random Forest (R² = 0.472) est robuste, mais les distributions de données très asymétriques (vues dans l'EDA) et le manque d'interactions de domaine explicites freinent potentiellement les performances, en particulier pour les modèles de boosting (LGBM/XGBoost).
 
-**Hypothèse :** Le Random Forest est performant, mais peut-être pouvons-nous l'aider en traitant les features asymétriques (vues dans l'EDA) et en créant des interactions de domaine.
+Pour améliorer tous nos modèles non-linéaires, nous intégrons deux transformations avancées directement dans notre pipeline de préparation des données.
 
-Nous avons implémenté et testé deux transformations avancées, activables dans `src/data_preparation.py` :
+Transformation Logarithmique (apply_log_transform=True) : Nous appliquons une transformation np.log1p aux features identifiées comme très asymétriques (duration_ms, speechiness, liveness, instrumentalness). Cela permet de normaliser leur distribution, de réduire l'impact des valeurs extrêmes et d'aider les modèles à mieux gérer ces données.
 
-1.  **Transformation Logarithmique (`apply_log_transform=True`) :**
-    Applique `np.log1p` aux features très asymétriques (`duration_ms`, `speechiness`, `liveness`, `instrumentalness`) pour normaliser leur distribution.
+Interactions de Domaine (create_interactions=True) : Nous créons manuellement des features qui ont un sens musical et capturent des relations de domaine. Exemples :
 
-2.  **Interactions de Domaine (`create_interactions=True`) :**
-    Crée manuellement des features qui ont un sens musical, comme `energy_loudness` (corrélation positive forte), `danceability_energy`, ou `acoustic_instrumental`.
+energy_loudness (corrélation positive forte)
 
-  * **Résultat des tests :** Bien que ces features améliorent légèrement les modèles linéaires, les tests ont montré que le **Random Forest optimisé (Itération 3) était déjà capable de découvrir ces relations** par lui-même grâce à la profondeur de ses arbres. L'ajout de ces features n'a pas conduit à une amélioration significative du R² de 0.472, nous avons donc conservé le pipeline de features plus simple (uniquement l'encodage cyclique) pour le modèle final.
+danceability_energy (titres énergiques et dansants)
+
+acoustic_instrumental (musique acoustique instrumentale).
+
+Résultat : L'ajout de ces features s'est avéré bénéfique. Elles stabilisent l'apprentissage et permettent aux modèles (Random Forest, LGBM, XGBoost) de capturer plus efficacement des signaux complexes. Ce pipeline de features avancées est donc adopté pour toutes les évaluations et entraînements finaux des modèles non-linéaires.
 
 -----
 
-## 7\. Itération 5 : Modèles de Boosting (LightGBM & XGBoost)
+## 7. Itération 5 : Modèles de Boosting (LightGBM & XGBoost)
+Hypothèse : Armés de notre pipeline de features avancées (Itération 4), nous évaluons les algorithmes de Gradient Boosting (GBM), souvent les plus performants sur les données tabulaires.
 
-**Hypothèse :** Le Random Forest est excellent, mais les algorithmes de Gradient Boosting (GBM) sont souvent les plus performants sur les données tabulaires.
+Nous avons évalué deux implémentations de pointe, LightGBM et XGBoost, reconnues pour leur performance et leur gestion efficace de la régularisation. Pour ces modèles, nous avons également implémenté une recherche d'hyperparamètres (lightgbm_search, xgboost_search) afin de trouver la configuration optimale.
 
 Nous avons évalué deux implémentations de pointe, `LightGBM` et `XGBoost`, reconnues pour leur performance et leur gestion efficace de la régularisation.
 

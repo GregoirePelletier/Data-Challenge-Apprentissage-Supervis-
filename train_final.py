@@ -1,9 +1,11 @@
 """
 Script d'entraînement final pour le challenge Spotify Popularity Prediction.
+Utilise le Target Encoding pour les genres.
 
 Modèles disponibles:
 - polynomial_ridge: Ridge avec features polynomiales (R² = 0.264)
 - random_forest: Random Forest optimisé (R² = 0.472)
+- random_forest_search: Random Forest avec RandomizedSearchCV
 - lightgbm: LightGBM (rapide et efficace)
 - xgboost: XGBoost (régularisation L1/L2)
 - lightgbm_search: LightGBM avec RandomizedSearchCV
@@ -22,6 +24,7 @@ from xgboost import XGBRegressor
 from lightgbm import LGBMRegressor
 import joblib
 import warnings
+import os # Ajout pour vérifier le dossier results
 warnings.filterwarnings('ignore')
 
 # Import des modules personnalisés
@@ -37,45 +40,55 @@ from src.pipelines import create_simple_preprocessor, create_polynomial_preproce
 # Définition du scorer R² pour RandomizedSearchCV
 r2_scorer = make_scorer(r2_score)
 
-# Grilles de paramètres pour RandomizedSearchCV
-# Complétées avec des plages de valeurs courantes pour la recherche
+# === CORRECTION DES GRILLES : Suppression de tous les préfixes 'regressor__' ===
+
 param_grid_xgboost = {
-    'regressor__n_estimators': [100, 300, 500, 700],
-    'regressor__learning_rate': [0.01, 0.05, 0.1, 0.2],
-    'regressor__max_depth': [3, 5, 7, 9],
-    'regressor__subsample': [0.6, 0.8, 1.0],
-    'regressor__colsample_bytree': [0.6, 0.8, 1.0],
-    'regressor__gamma': [0, 0.1, 0.2],
-    'regressor__reg_alpha': [0, 0.01, 0.1, 0.5],
-    'regressor__reg_lambda': [0.5, 1, 1.5]
+    'n_estimators': [100, 300, 500, 700],
+    'learning_rate': [0.01, 0.05, 0.1, 0.2],
+    'max_depth': [3, 5, 7, 9],
+    'subsample': [0.6, 0.8, 1.0], 
+    'colsample_bytree': [0.6, 0.8, 1.0],
+    'gamma': [0, 0.1, 0.2],
+    'reg_alpha': [0, 0.01, 0.1, 0.5],
+    'reg_lambda': [0.5, 1, 1.5]
 }
 
 param_grid_lightgbm = {
-    'regressor__n_estimators': [100, 300, 500, 700],
-    'regressor__learning_rate': [0.01, 0.05, 0.1, 0.2],
-    'regressor__max_depth': [5, 7, 9, 12],
-    'regressor__num_leaves': [15, 31, 63, 127],
-    'regressor__subsample': [0.6, 0.8, 1.0],
-    'regressor__colsample_bytree': [0.6, 0.8, 1.0],
-    'regressor__reg_alpha': [0, 0.01, 0.1, 0.5],
-    'regressor__reg_lambda': [0.5, 1, 1.5]
+    'n_estimators': [100, 300, 500, 700],
+    'learning_rate': [0.01, 0.05, 0.1, 0.2],
+    'max_depth': [5, 7, 9, 12, 15],
+    'num_leaves': [15, 31, 63, 127],
+    'subsample': [0.6, 0.8, 1.0],
+    'colsample_bytree': [0.6, 0.8, 1.0],
+    'reg_alpha': [0, 0.01, 0.1, 0.5],
+    'reg_lambda': [0.5, 1, 1.5]
 }
 
-def get_model_and_preprocessor(model_name, numeric_features, categorical_features):
-    """
-    Retourne le modèle et le pipeline de prétraitement approprié.
-    """
+param_grid_random_forest = {
+    'n_estimators': [100, 200, 300, 500],
+    'max_depth': [None, 10, 20, 30],
+    'min_samples_split': [2, 5, 10],
+    'min_samples_leaf': [1, 2, 4, 6],
+    'max_features': [0.5, 0.7, 1.0, 'sqrt'],
+    'bootstrap': [True, False]
+}
+# --- FIN DES CORRECTIONS DE GRILLES ---
+
+
+def get_model_and_preprocessor(model_name: str, numeric_features: list, ohe_features: list, target_encode_features: list):
+    """Retourne le modèle et le préprocesseur appropriés selon le nom du modèle."""
     
     if model_name == "polynomial_ridge":
         print("Modèle: Ridge Polynomial (degree=2)")
         print("R² attendu: 0.264")
         model = RidgeCV(alphas=np.logspace(-2, 2, 10))
-        preprocessor = create_polynomial_preprocessor(numeric_features, categorical_features)
+        
+        all_categorical_features = ohe_features + target_encode_features
+        preprocessor = create_polynomial_preprocessor(numeric_features, all_categorical_features)
         
     elif model_name == "random_forest":
         print("Modèle: Random Forest (optimisé)")
-        print("R² attendu: 0.472")
-        print("Configuration: n_estimators=500, max_depth=None, max_features=0.7")
+        print("R² attendu: ~0.472 (va changer avec Target Enc.)")
         model = RandomForestRegressor(
             n_estimators=500,
             max_depth=None,
@@ -87,8 +100,26 @@ def get_model_and_preprocessor(model_name, numeric_features, categorical_feature
             n_jobs=-1,
             verbose=0
         )
-        preprocessor = create_simple_preprocessor(numeric_features, categorical_features)
+        preprocessor = create_simple_preprocessor(numeric_features, ohe_features, target_encode_features)
         
+    elif model_name == "random_forest_search":
+        print("Modèle: Random Forest (Recherche Hyperparamètres)")
+        print("Configuration: RandomizedSearchCV (n_iter=100, cv=5, scoring=R²)")
+        
+        base_model = RandomForestRegressor(random_state=42, n_jobs=-1)
+        
+        model = RandomizedSearchCV(
+            estimator=base_model,
+            param_distributions=param_grid_random_forest, # Grille SANS préfixe
+            n_iter=100,
+            scoring=r2_scorer,
+            cv=5,
+            random_state=42,
+            n_jobs=-1,
+            verbose=1
+        )
+        preprocessor = create_simple_preprocessor(numeric_features, ohe_features, target_encode_features)
+    
     elif model_name == "lightgbm":
         try:
             from lightgbm import LGBMRegressor
@@ -110,7 +141,7 @@ def get_model_and_preprocessor(model_name, numeric_features, categorical_feature
             n_jobs=-1,
             verbose=-1
         )
-        preprocessor = create_simple_preprocessor(numeric_features, categorical_features)
+        preprocessor = create_simple_preprocessor(numeric_features, ohe_features, target_encode_features)
 
     elif model_name == "lightgbm_search":
         try:
@@ -121,21 +152,21 @@ def get_model_and_preprocessor(model_name, numeric_features, categorical_feature
             )
         
         print("Modèle: LightGBM (Recherche Hyperparamètres)")
-        print("Configuration: RandomizedSearchCV (n_iter=10, cv=3, scoring=R²)")
+        print("Configuration: RandomizedSearchCV (n_iter=200, cv=5, scoring=R²)")
         
         base_model = LGBMRegressor(random_state=42, n_jobs=-1, verbose=-1)
         model = RandomizedSearchCV(
             estimator=base_model,
-            param_distributions=param_grid_lightgbm,
-            n_iter=10, # Pour un test rapide, augmenter pour une recherche plus approfondie
+            param_distributions=param_grid_lightgbm, # Grille SANS préfixe
+            n_iter=200, 
             scoring=r2_scorer,
-            cv=5, # Utilisation de 5-fold cross-validation
+            cv=5, 
             random_state=42,
             n_jobs=-1,
             verbose=1
         )
-        preprocessor = create_simple_preprocessor(numeric_features, categorical_features)
-        
+        preprocessor = create_simple_preprocessor(numeric_features, ohe_features, target_encode_features)
+
     elif model_name == "xgboost":
         try:
             from xgboost import XGBRegressor
@@ -158,7 +189,7 @@ def get_model_and_preprocessor(model_name, numeric_features, categorical_feature
             n_jobs=-1,
             verbosity=0
         )
-        preprocessor = create_simple_preprocessor(numeric_features, categorical_features)
+        preprocessor = create_simple_preprocessor(numeric_features, ohe_features, target_encode_features)
 
     elif model_name == "xgboost_search":
         try:
@@ -169,28 +200,30 @@ def get_model_and_preprocessor(model_name, numeric_features, categorical_feature
             )
         
         print("Modèle: XGBoost (Recherche Hyperparamètres)")
-        print("Configuration: RandomizedSearchCV (n_iter=10, cv=3, scoring=R²)")
+        print("Configuration: RandomizedSearchCV (n_iter=200, cv=5, scoring=R²)")
         
         base_model = XGBRegressor(random_state=42, n_jobs=-1, verbosity=0)
         model = RandomizedSearchCV(
             estimator=base_model,
-            param_distributions=param_grid_xgboost,
-            n_iter=10, # Pour un test rapide, augmenter pour une recherche plus approfondie
+            param_distributions=param_grid_xgboost, # Grille SANS préfixe
+            n_iter=200, 
             scoring=r2_scorer,
-            cv=5, # Utilisation de 5-fold cross-validation
+            cv=5, 
             random_state=42,
             n_jobs=-1,
             verbose=1
         )
-        preprocessor = create_simple_preprocessor(numeric_features, categorical_features)
+        preprocessor = create_simple_preprocessor(numeric_features, ohe_features, target_encode_features)
         
     else:
         raise ValueError(
             f"Modèle '{model_name}' non reconnu.\n"
-            f"Modèles valides: polynomial_ridge, random_forest, lightgbm, xgboost, lightgbm_search, xgboost_search"
+            "Modèles valides: polynomial_ridge, random_forest, random_forest_search, "
+            "lightgbm, xgboost, lightgbm_search, xgboost_search"
         )
     
     return model, preprocessor
+
 
 def main(model_name):
     """
@@ -206,17 +239,18 @@ def main(model_name):
     
     train_df, test_df = load_data()
     
-    # Activation de la transformation logarithmique et des interactions
+    # Utilisation des features AVANCÉES
     train_df = initial_feature_engineering(train_df, apply_log_transform=True, create_interactions=True)
     test_df = initial_feature_engineering(test_df, apply_log_transform=True, create_interactions=True)
     
     X_train, y_train = get_features_and_target(train_df)
     X_test, test_row_ids = get_test_features(test_df)
     
-        # Mise à jour de la liste des features pour inclure les ajouts
-    numeric_features, categorical_features = get_feature_names(
+    # Récupérer les 3 listes de features
+    numeric_features, ohe_features, target_encode_features = get_feature_names(
         include_log_features=True, 
-        include_interactions=True)
+        include_interactions=True
+    )
     
     print(f"   Observations train: {len(X_train):,}")
     print(f"   Observations test: {len(X_test):,}")
@@ -226,7 +260,7 @@ def main(model_name):
     # 2. Obtenir le modèle et le préprocesseur
     print("2. Configuration du modèle...")
     regressor, preprocessor = get_model_and_preprocessor(
-        model_name, numeric_features, categorical_features
+        model_name, numeric_features, ohe_features, target_encode_features
     )
     print()
 
@@ -234,7 +268,7 @@ def main(model_name):
     print("3. Création du pipeline...")
     full_pipeline = Pipeline(steps=[
         ('preprocessor', preprocessor),
-        ('regressor', regressor)
+        ('regressor', regressor) # Nom de l'étape est 'regressor'
     ])
     print("   ✓ Pipeline créé")
     print()
@@ -242,24 +276,33 @@ def main(model_name):
     # 4. Entraîner le modèle
     print("4. Entraînement du modèle...")
     print("   (Cela peut prendre quelques minutes...)")
+    
+    # .fit(X, y) gère tout, y compris le TargetEncoder
     full_pipeline.fit(X_train, y_train)
+
     print("   ✓ Entraînement terminé")
     print()
 
     # Afficher les hyperparamètres optimaux si RandomizedSearchCV a été utilisé
     if 'search' in model_name:
-        best_r2 = full_pipeline.best_score_
-        best_params = full_pipeline.best_params_
+        # Accéder à l'étape 'regressor' (qui est le RandomizedSearchCV)
+        best_r2 = full_pipeline.named_steps['regressor'].best_score_
+        best_params = full_pipeline.named_steps['regressor'].best_params_
+        
         print("   ✓ Résultats de la recherche (RandomizedSearchCV):")
         print(f"   Meilleur R² (CV): {best_r2:.4f}")
         print("   Meilleurs paramètres:")
         for k, v in best_params.items():
+            # Les clés sont maintenant 'n_estimators', etc. SANS préfixe
             print(f"     - {k}: {v}")
         print()
         
-        # Enregistrer le meilleur modèle trouvé par RandomizedSearchCV
+        if not os.path.exists('results'):
+            os.makedirs('results')
+            print("   ✓ Dossier 'results' créé.")
+            
         model_filename = f"results/best_model_{model_name}.joblib"
-        joblib.dump(full_pipeline.best_estimator_, model_filename)
+        joblib.dump(full_pipeline.named_steps['regressor'].best_estimator_, model_filename)
         print(f"   ✓ Meilleur modèle enregistré sous '{model_filename}'")
         print()
 
@@ -308,7 +351,7 @@ if __name__ == "__main__":
         "--model", 
         type=str, 
         required=True, 
-        choices=["polynomial_ridge", "random_forest", "lightgbm", "xgboost", "lightgbm_search", "xgboost_search"],
+        choices=["polynomial_ridge", "random_forest", "random_forest_search", "lightgbm", "xgboost", "lightgbm_search", "xgboost_search"],
         help="Le modèle à entraîner. Les options '_search' lancent une recherche d'hyperparamètres."
     )
     args = parser.parse_args()

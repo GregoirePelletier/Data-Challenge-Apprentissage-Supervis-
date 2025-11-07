@@ -124,18 +124,8 @@ def get_test_features(test_df):
 
 def get_feature_names(include_log_features=False, include_interactions=False):
     """
-    Définit et retourne les listes de noms pour les variables numériques et catégorielles.
-
-    Parameters:
-    -----------
-    include_log_features : bool, default=False
-        Si True, inclut les features transformées logarithmiquement
-    include_interactions : bool, default=False
-        Si True, inclut les features d'interaction
-
-    Returns:
-    --------
-    tuple : (numeric_features, categorical_features)
+    Définit et retourne les listes de noms pour les variables numériques,
+    catégorielles (OHE) et catégorielles (Target Encoding).
     """
     # Features numériques de base (après transformation de 'key')
     numeric_features = [
@@ -144,7 +134,7 @@ def get_feature_names(include_log_features=False, include_interactions=False):
         'valence', 'tempo', 'key_sin', 'key_cos'
     ]
 
-    # Ajouter les features transformées logarithmiquement si demandé
+    # ... (le code pour include_log_features et include_interactions reste identique)
     if include_log_features:
         log_features = [
             'duration_ms_log', 'speechiness_log',
@@ -152,7 +142,6 @@ def get_feature_names(include_log_features=False, include_interactions=False):
         ]
         numeric_features.extend(log_features)
 
-    # Ajouter les features d'interaction si demandé
     if include_interactions:
         interaction_features = [
             'energy_loudness', 'danceability_energy',
@@ -162,13 +151,17 @@ def get_feature_names(include_log_features=False, include_interactions=False):
         ]
         numeric_features.extend(interaction_features)
 
-    # Features catégorielles
-    categorical_features_numeric = ['mode', 'time_signature', 'explicit']
-    categorical_features_object = ['track_genre']
 
-    all_categorical_features = categorical_features_numeric + categorical_features_object
+    # MODIFICATION : Séparer les features catégorielles
+    
+    # Features pour One-Hot Encoding (faible cardinalité)
+    ohe_features = ['mode', 'time_signature', 'explicit']
+    
+    # Feature pour Target Encoding (haute cardinalité)
+    target_encode_features = ['track_genre']
 
-    return numeric_features, all_categorical_features
+    # Retourner 3 listes
+    return numeric_features, ohe_features, target_encode_features
 
 
 class OutlierClipper(BaseEstimator, TransformerMixin):
