@@ -65,9 +65,9 @@ venv.bak/
 
 # Data files
 *.csv
-*.png
 .roomodes
 *.joblib
 catboost_info
 results
 figures
+docs/CONTEXT.md

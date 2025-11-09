@@ -1,27 +1,26 @@
 # Guide d'Utilisation - Challenge Spotify Popularity Prediction
 
-## 🚀 Démarrage Rapide
+## Démarrage Rapide
 
 ### Installation
 
 ```bash
 # Installer les dépendances de base
 pip install -r requirements.txt
+
+
+# Installer les modèles de boosting (recommandé)
+pip install lightgbm xgboost catboost
 ```
-
-**C'est tout !** Les 2 meilleurs modèles fonctionnent sans dépendances supplémentaires.
-
 ---
 
-## 📊 Modèles Disponibles
+## Modèles Disponibles
 
-### Modèles de Base (sans installation supplémentaire)
-
-#### 1. Random Forest ⭐ MEILLEUR (R² = 0.472)
+#### 1. Random Forest
 ```bash
 python train_final.py --model random_forest
 ```
-- **Performance:** R² = 0.472 (meilleur résultat)
+- **Performance:** R² = 0.536
 - **Temps:** ~5 minutes
 - **Fichier généré:** `submission_random_forest.csv`
 
@@ -35,7 +34,7 @@ python train_final.py --model polynomial_ridge
 
 ### Modèles Avancés (nécessitent installation)
 
-#### 3. LightGBM (optionnel)
+#### 3. LightGBM (R² = 0.520)
 ```bash
 # Installation (léger, ~1.5 MB)
 python -m pip install lightgbm
@@ -46,7 +45,7 @@ python train_final.py --model lightgbm
 - **Avantages:** Très rapide, gestion efficace des catégorielles
 - **Temps:** ~2 minutes
 
-#### 4. XGBoost (optionnel)
+#### 4. XGBoost MEILLEUR BASE (R² = 0.538)
 ```bash
 # Installation (lourd, ~57 MB)
 python -m pip install xgboost
@@ -57,18 +56,29 @@ python train_final.py --model xgboost
 - **Avantages:** Régularisation L1/L2, excellentes performances
 - **Temps:** ~3 minutes
 
+### Modèle d'Ensemble (Potentiel Max)
+#### 5. Stacking
+```bash
+python train_final.py --model stacking
+```
+- **Avantages:** Combine les prédictions de XGBoost, RF et LGBM. Souvent le meilleur score en compétition.
+
+- **Temps:** Très long (~15-25 minutes) car il entraîne 3 modèles.
+
+#### Autres Modèles
+catboost: Modèle de base (non optimisé) de CatBoost.
 ---
 
-## 🎯 Workflow Recommandé
+## Workflow Recommandé
 
 ### Option 1: Utiliser le Meilleur Modèle (Recommandé)
 
 ```bash
-# Entraîner Random Forest (meilleur modèle)
-python train_final.py --model random_forest
+# Entraîner XGBoost (meilleur modèle de base CV)
+python train_final.py --model xgboost
 ```
 
-**Résultat:** Fichier `submission_random_forest.csv` prêt pour Kaggle
+**Résultat:** Fichier `submission_xgboost.csv` prêt pour Kaggle
 
 ### Option 2: Évaluer Tous les Modèles Disponibles
 
@@ -84,108 +94,31 @@ python evaluate_final.py
 
 **Note:** Cette commande évalue uniquement les modèles installés. Si LightGBM/XGBoost ne sont pas installés, ils seront ignorés.
 
-### Option 3: Comparer Plusieurs Soumissions
+### Option 3: Stacking
 
 ```bash
-# Générer plusieurs soumissions
-python train_final.py --model polynomial_ridge
-python train_final.py --model random_forest
-
-# Si LightGBM/XGBoost installés
-python train_final.py --model lightgbm
-python train_final.py --model xgboost
+# Entraîner le modèle d'ensemble
+python train_final.py --model stacking
 ```
 
-**Résultat:** Plusieurs fichiers `submission_*.csv` à tester sur Kaggle
+**Résultat:** `submission_stacking.csv` à tester sur Kaggle
 
 ---
 
 ## 📈 Performances Attendues
 
-| Modèle | R² (test) | RMSE | Temps | Installation |
-|--------|-----------|------|-------|--------------|
-| **Random Forest** | **0.472** | 16.20 | ~5 min | ✅ Base |
-| Ridge Polynomial | 0.264 | 19.14 | ~30 sec | ✅ Base |
-| LightGBM | 0.520 | 15.40 | ~2 min | ⚠️ Optionnel |
-| XGBoost | **0.538** | **15.10** | ~3 min | ⚠️ Optionnel |
+Modèle,R² (test CV),RMSE (estimé),Temps (approx.)
+XGBoost,0.538,~15.2,~4 min
+Random Forest,0.536,~15.3,~6 min
+LightGBM,0.520,~15.5,~2 min
+Stacking,(> 0.538),?,~20 min
+Ridge Polynomial,0.269,19.1,~30 sec
 
-**Recommandation:** Commencer avec **XGBoost** (meilleur résultat, nécessite installation) ou **Random Forest** (bon résultat, pas d'installation supplémentaire)
-
----
-
-## 📊 Comparaison des Modèles
-
-### Random Forest vs Ridge Polynomial
-
-| Critère | Random Forest | Ridge Polynomial |
-|---------|---------------|------------------|
-| **R²** | 0.472 ⭐ | 0.264 |
-| **RMSE** | 16.20 | 19.14 |
-| **Temps** | ~5 min | ~30 sec |
-| **Sur-apprentissage** | Modéré (0.284) | Aucun (0.004) |
-| **Stabilité** | Bonne | Excellente |
-| **Recommandation** | **Meilleur pour Kaggle** | Bon pour baseline |
-
-**Verdict:** Random Forest est le meilleur choix pour maximiser le score Kaggle.
-
-### Pourquoi Random Forest est Meilleur ?
-
-1. **Performance:** +78% de R² vs Ridge Polynomial (0.472 vs 0.264)
-2. **Optimisé:** Hyperparamètres trouvés par RandomizedSearchCV (50 itérations)
-3. **Robuste:** 500 arbres, profondeur illimitée
-4. **Temps acceptable:** ~5 minutes d'entraînement
+**Recommandation:** Commencer avec **XGBoost** (meilleur résultat modèle seul, nécessite installation) ou **Random Forest** (bon résultat, pas d'installation supplémentaire), ou **Stacking** meilleur modèle
 
 ---
 
-## 🎯 Cas d'Usage
-
-### Cas 1: Je veux le meilleur score Kaggle
-
-```bash
-# Installer XGBoost
-python -m pip install xgboost
-
-# Entraîner XGBoost (meilleur modèle)
-python train_final.py --model xgboost_search
-```
-
-**Résultat:** R² = 0.538 (meilleur modèle)
-
-### Cas 2: Je veux un modèle rapide et stable
-
-```bash
-python train_final.py --model polynomial_ridge
-```
-
-**Résultat:** R² = 0.264 (stable, 30 secondes)
-
-### Cas 3: Je veux comparer plusieurs modèles
-
-```bash
-# Évaluer d'abord
-python evaluate_final.py
-
-# Entraîner les meilleurs
-python train_final.py --model random_forest
-python train_final.py --model polynomial_ridge
-```
-
-### Cas 4: Je veux tester LightGBM/XGBoost
-
-```bash
-# Installer
-python -m pip install lightgbm xgboost
-
-# Évaluer
-python evaluate_final.py
-
-# Entraîner le meilleur
-python train_final.py --model <meilleur_modele>
-```
-
----
-
-## 📁 Fichiers Générés
+## Fichiers Générés
 
 ### Après `train_final.py`
 
@@ -201,7 +134,6 @@ row_id,popularity
 ...
 ```
 
-**Prêt pour soumission Kaggle !**
 
 ### Après `evaluate_final.py`
 
@@ -216,19 +148,19 @@ results/evaluation_final.csv
 
 ---
 
-## 🎓 Conseils
+## Conseils
 
 ### Pour Maximiser le Score Kaggle
 
-1. ✅ **Utiliser XGBoost** (R² = 0.538)
-2. ✅ **Soumettre `submission_xgboost_search.csv`**
-3. ⚠️ **Attention au sur-apprentissage** (surveiller le score public vs privé)
+1. Utiliser XGBoost (R² = 0.538)
+2. Soumettre `submission_xgboost_search.csv`
+3. Attention au sur-apprentissage (surveiller le score public vs privé)
 
 ### Pour la Présentation
 
-1. ✅ **Montrer l'évaluation comparative** (`evaluate_final.py`)
-2. ✅ **Expliquer le choix de Random Forest** (optimisation, performance)
-3. ✅ **Documenter les hyperparamètres** (voir `docs/rapport.md`)
+1. Montrer l'évaluation comparative (`evaluate_final.py`)
+2. Expliquer le choix de Random Forest (optimisation, performance)
+3. Documenter les hyperparamètres (voir `docs/rapport.md`)
 
 ### Pour Aller Plus Loin (Optionnel)
 
@@ -239,7 +171,7 @@ results/evaluation_final.csv
 
 ---
 
-## 📝 Résumé
+## Résumé
 
 ### Commandes Essentielles
 
@@ -269,25 +201,3 @@ python train_final.py --model polynomial_ridge
 - **Meilleur modèle:** XGBoost (R² = 0.538)
 - **Fichier de soumission:** `submission_xgboost_search.csv`
 - **Temps total:** ~3 minutes
-
----
-
-## 🎉 Conclusion
-
-**Pour un data challenge académique, XGBoost est le meilleur choix:**
-
-✅ **Performance:** R² = 0.538 (meilleur résultat)
-✅ **Rapidité:** ~3 minutes d'entraînement
-✅ **Prêt:** Fichier de soumission généré automatiquement
-
-**Commandes:**
-```bash
-# Installer XGBoost
-python -m pip install xgboost
-
-# Entraîner le modèle
-python train_final.py --model xgboost_search
-```
-
-**Bonne chance pour le challenge ! 🚀**
-

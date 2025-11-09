@@ -1,13 +1,12 @@
 # Rapport d'Analyse - Challenge Spotify Popularity Prediction
 
 **Auteur:** Grégoire Pelletier, Rémi Saout
-**Date:** 30/09/2025
 
 -----
 
 ## 1\. Introduction et Objectif
 
-Ce rapport détaille la méthodologie itérative employée pour prédire la **popularité** d'un titre musical sur Spotify (un score de 0 à 100). L'objectif est de construire un modèle de régression performant à partir des caractéristiques audio et des métadonnées des titres.
+Ce rapport détaille la méthodologie itérative employée pour prédire la **popularité** d'un titre musical sur Spotify (un score de 0 à 100) en se basant sur ses caractéristiques audio et ses métadonnées.
 
 La démarche suit une approche chronologique et les bonnes pratiques de l'apprentissage supervisé :
 
@@ -57,7 +56,7 @@ _(Le script génère le graphique `correlation_matrix.png` pour visualiser cela)
 
 ## 3\. Itération 1 : Modèle de Baseline (Régression Linéaire Simple)
 
-Pour établir un score de référence, un premier pipeline simple a été créé :
+Pour établir un score de référence, un pipeline simple a été créé :
 
 1.  **Numérique :** `StandardScaler` (centrage-réduction).
 2.  **Catégoriel :** `OneHotEncoder` (pour `track_genre`, `mode`, `explicit`, etc.).
@@ -138,7 +137,7 @@ RandomForestRegressor(
 
 -----
 
-## 6. Itération 4 : Feature Engineering Avancé (Implémenté)
+## 6. Itération 4 : Feature Engineering Avancé
 Hypothèse : Le score du Random Forest (R² = 0.472) est robuste, mais les distributions de données très asymétriques (vues dans l'EDA) et le manque d'interactions de domaine explicites freinent potentiellement les performances, en particulier pour les modèles de boosting (LGBM/XGBoost).
 
 Pour améliorer tous nos modèles non-linéaires, nous intégrons deux transformations avancées directement dans notre pipeline de préparation des données.
@@ -157,8 +156,37 @@ Résultat : L'ajout de ces features s'est avéré bénéfique. Elles stabilisent
 
 -----
 
-## 7. Itération 5 : Modèles de Boosting (LightGBM & XGBoost)
+## 7. Itération 5 : Modèles de Boosting (LightGBM & XGBoost) et Random Forest
+
+### Nouvelle Optimisation Random Forest (RandomizedSearchCV)
+
+Suite à une nouvelle recherche d'hyperparamètres plus approfondie avec `RandomizedSearchCV`, un nouveau modèle Random Forest a été identifié avec des performances améliorées.
+
+**Meilleurs paramètres trouvés :**
+```
+RandomForestRegressor(
+   n_estimators=200,
+   min_samples_split=2,
+   min_samples_leaf=2,
+   max_features='sqrt',
+   max_depth=30,
+   bootstrap=False,
+   random_state=42,
+   n_jobs=-1
+)
+```
+  * **Meilleur R² (CV) :** **0.5356**
+  * **Justification de l'amélioration :**
+    *   **`n_estimators=200`** : Un nombre d'arbres plus faible que la configuration précédente (500) mais suffisant pour capturer la complexité, tout en réduisant potentiellement le risque de sur-apprentissage et le temps d'entraînement.
+    *   **`min_samples_split=2` et `min_samples_leaf=2`** : Ces valeurs plus faibles permettent aux arbres d'être plus profonds et de capturer des relations plus fines dans les données, sans pour autant sur-apprendre grâce à la régularisation implicite du Random Forest et aux autres hyperparamètres.
+    *   **`max_features='sqrt'`** : En sélectionnant `sqrt(n_features)` à chaque split, le modèle introduit plus de diversité entre les arbres, ce qui réduit la variance et améliore la robustesse. La configuration précédente utilisait `0.7` des features, ce qui pouvait rendre les arbres plus corrélés.
+    *   **`max_depth=30`** : Une profondeur maximale définie permet aux arbres d'explorer des relations complexes sans devenir trop spécifiques aux données d'entraînement, contrairement à `None` qui peut mener à des arbres très profonds et au sur-apprentissage.
+    *   **`bootstrap=False`** : L'échantillonnage sans remplacement pour la construction des arbres peut parfois être bénéfique en réduisant la corrélation entre les arbres et en augmentant la diversité, surtout lorsque le nombre d'estimateurs est ajusté.
+
+  * **Conclusion :** Cette nouvelle configuration du Random Forest atteint un R² de 0.5356, surpassant significativement la version précédente (0.472) et se rapprochant des performances des modèles de boosting (XGBoost à 0.5381). Cela démontre l'importance d'une optimisation fine des hyperparamètres, même pour des modèles déjà performants.
 Hypothèse : Armés de notre pipeline de features avancées (Itération 4), nous évaluons les algorithmes de Gradient Boosting (GBM), souvent les plus performants sur les données tabulaires.
+
+### Boosting (RandomizedSearchCV)
 
 Nous avons évalué deux implémentations de pointe, LightGBM et XGBoost, reconnues pour leur performance et leur gestion efficace de la régularisation. Pour ces modèles, nous avons également implémenté une recherche d'hyperparamètres (lightgbm_search, xgboost_search) afin de trouver la configuration optimale.
 
@@ -166,7 +194,7 @@ Nous avons évalué deux implémentations de pointe, `LightGBM` et `XGBoost`, re
 
   * **Résultat (`lightgbm_search`) :** **R² = 0.5202**.
   * **Résultat (`xgboost_search`) :** **R² = 0.5381**.
-  * **Conclusion :** XGBoost surpasse légèrement LightGBM et Random Forest, établissant un nouveau meilleur score.
+  * **Conclusion :** XGBoost surpasse légèrement LightGBM et Random Forest, établissant un meilleur score.
 
 -----
 
@@ -181,11 +209,11 @@ Nous avons évalué deux implémentations de pointe, `LightGBM` et `XGBoost`, re
 | Random Forest | 0.472 | 16.20 | ~5 min | Modéré (0.284) | ✅ Base |
 | Ridge Polynomial | 0.264 | 19.14 | ~30 sec | Aucun (0.004) | ✅ Base |
 
-**Meilleur modèle:** XGBoost optimisé (R² = 0.538)
+**Modèle le plus performant:** XGBoost optimisé (R² = 0.538)
 
 **Soumissions générées:**
 
-*   `submission_xgboost_search.csv` - R² = 0.538 (meilleur)
+*   `submission_xgboost_search.csv` - R² = 0.538 (le plus performant)
 *   `submission_lightgbm_search.csv` - R² = 0.520
 *   `submission_random_forest.csv` - R² = 0.472
 *   `submission_polynomial_ridge.csv` - R² = 0.264
@@ -286,7 +314,7 @@ Une étape de **clipping** a été ajoutée pour s'assurer que toutes les prédi
 
 Ce projet a démontré l'importance d'une approche itérative :
 
-1.  L'**EDA** a été fondamentale, en identifiant immédiatement la nature non-linéaire du problème.
+1.  L'**EDA** a été fondamentale, en identifiant la nature non-linéaire du problème.
 2.  Le **Feature Engineering** ciblé (encodage cyclique) a été plus impactant que l'ingénierie "en force" (polynomiale).
 3.  L'**Optimisation d'Hyperparamètres** a été cruciale, transformant un bon modèle (Random Forest par défaut) en un excellent modèle (+210% d'amélioration vs baseline).
 
@@ -305,13 +333,13 @@ pip install -r requirements.txt
 # (Optionnel) Installer les modèles avancés
 python -m pip install lightgbm xgboost
 
-# Évaluer tous les modèles installés (Recommandé)
+# Évaluer tous les modèles installés
 python evaluate_final.py
 
-# Entraîner le meilleur modèle (Random Forest)
+# Entraîner le modèle le plus performant (Random Forest)
 python train_final.py --model random_forest
 
-# Entraîner le meilleur modèle (Linear)
+# Entraîner le modèle linéaire
 python train_final.py --model polynomial_ridge
 
 # Lancer une recherche d'hyperparamètres pour LightGBM
