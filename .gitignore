@@ -71,3 +71,6 @@ catboost_info
 results
 figures
 docs/CONTEXT.md
+
+# CatBoost training logs
+catboost_info/

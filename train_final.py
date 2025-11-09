@@ -75,12 +75,13 @@ param_grid_random_forest = {
     'max_features': [0.5, 0.7, 'sqrt']
 }
 
+
 param_grid_catboost = {
-    'depth': [6, 8, 10, 12],
-    'learning_rate': [0.03, 0.05, 0.1, 0.2],
-    'iterations': [1000, 1500, 2000],
-    'l2_leaf_reg': [1, 3, 5, 7],
-    'border_count': [32, 64, 128]
+    'depth': [6, 8, 10],
+    'learning_rate': [0.05, 0.1, 0.2],
+    'iterations': [800, 1000, 1200],
+    'l2_leaf_reg': [1, 3, 5], # Régularisation L2
+    'border_count': [64, 128]
 }
 
 
@@ -201,7 +202,7 @@ def get_model_and_preprocessor(model_name: str, numeric_features: list, ohe_feat
     # Cas pour CatBoost Search
     elif model_name == "catboost_search":
         if CatBoostRegressor is None: raise ImportError("CatBoost n'est pas installé.")
-        print("Modèle: CatBoost (Recherche Hyperparamètres)")
+        print("Modèle: CatBoost (Recherche Hyperparamètres LÉGÈRE)")
         
         # Calculer les INDICES des features catégorielles
         cat_features_indices = list(range(
@@ -214,21 +215,22 @@ def get_model_and_preprocessor(model_name: str, numeric_features: list, ohe_feat
             eval_metric='R2',
             random_seed=42,
             verbose=0,
-            cat_features=cat_features_indices # Utiliser les indices
+            cat_features=cat_features_indices, # Utiliser les indices
+            allow_writing_files=False # Désactive les logs catboost_info
         )
 
         model = RandomizedSearchCV(
             estimator=base_model,
-            param_distributions=param_grid_catboost,
-            n_iter=50, # 50 itérations
+            param_distributions=param_grid_catboost, # Utilise la grille légère
+            n_iter=15, # 15 itérations (au lieu de 50)
             scoring=r2_scorer,
-            cv=5, 
+            cv=3, # 3-fold CV (au lieu de 5)
             random_state=42,
             n_jobs=-1,
             verbose=1
         )
         preprocessor = create_catboost_preprocessor(numeric_features, ohe_features, target_encode_features)
-    
+        
     # Cas pour Stacking
     elif model_name == "stacking":
         if LGBMRegressor is None or XGBRegressor is None:
