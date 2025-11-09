@@ -69,3 +69,5 @@ venv.bak/
 .roomodes
 *.joblib
 catboost_info
+results
+figures
