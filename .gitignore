@@ -66,5 +66,5 @@ venv.bak/
 # Data files
 *.csv
 *.png
-*.pkl
+models/*.pkl
 *.pdf
