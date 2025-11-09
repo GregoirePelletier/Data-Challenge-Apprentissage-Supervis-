@@ -40,19 +40,6 @@ from src.pipelines import create_simple_preprocessor, create_polynomial_preproce
 # Définition du scorer R² pour RandomizedSearchCV
 r2_scorer = make_scorer(r2_score)
 
-# === CORRECTION DES GRILLES : Suppression de tous les préfixes 'regressor__' ===
-
-param_grid_xgboost = {
-    'n_estimators': [100, 300, 500, 700],
-    'learning_rate': [0.01, 0.05, 0.1, 0.2],
-    'max_depth': [3, 5, 7, 9],
-    'subsample': [0.6, 0.8, 1.0], 
-    'colsample_bytree': [0.6, 0.8, 1.0],
-    'gamma': [0, 0.1, 0.2],
-    'reg_alpha': [0, 0.01, 0.1, 0.5],
-    'reg_lambda': [0.5, 1, 1.5]
-}
-
 param_grid_lightgbm = {
     'n_estimators': [100, 300, 500, 700],
     'learning_rate': [0.01, 0.05, 0.1, 0.2],
@@ -62,6 +49,22 @@ param_grid_lightgbm = {
     'colsample_bytree': [0.6, 0.8, 1.0],
     'reg_alpha': [0, 0.01, 0.1, 0.5],
     'reg_lambda': [0.5, 1, 1.5]
+}
+
+# Nouvelle grille pour XGBoost, basée sur les résultats de LightGBM
+param_grid_xgboost = {
+    # Paramètres communs centrés sur les meilleurs scores de LGBM
+    'n_estimators': [400, 500, 600, 700],
+    'learning_rate': [0.1, 0.15, 0.2, 0.25],
+    'max_depth': [10, 12, 14, 16], # 'max_depth' 12 était optimal pour LGBM
+    'subsample': [0.5, 0.6, 0.7],          # Optimal LGBM = 0.6
+    'colsample_bytree': [0.7, 0.8, 0.9],  # Optimal LGBM = 0.8
+    'reg_alpha': [0, 0.01, 0.05, 0.1],    # Optimal LGBM = 0.01
+    'reg_lambda': [1.0, 1.5, 2.0, 3.0],   # Optimal LGBM = 1.5
+    
+    # Paramètres spécifiques à XGBoost (sans équivalent LGBM)
+    'gamma': [0, 0.1, 0.25, 0.5],          # 'min_split_gain' dans LGBM
+    'min_child_weight': [1, 3, 5, 7]       # 'min_child_samples' dans LGBM
 }
 
 param_grid_random_forest = {
@@ -200,13 +203,13 @@ def get_model_and_preprocessor(model_name: str, numeric_features: list, ohe_feat
             )
         
         print("Modèle: XGBoost (Recherche Hyperparamètres)")
-        print("Configuration: RandomizedSearchCV (n_iter=200, cv=5, scoring=R²)")
+        print("Configuration: RandomizedSearchCV (n_iter=100, cv=5, scoring=R²)")
         
         base_model = XGBRegressor(random_state=42, n_jobs=-1, verbosity=0)
         model = RandomizedSearchCV(
             estimator=base_model,
             param_distributions=param_grid_xgboost, # Grille SANS préfixe
-            n_iter=200, 
+            n_iter=100, 
             scoring=r2_scorer,
             cv=5, 
             random_state=42,
