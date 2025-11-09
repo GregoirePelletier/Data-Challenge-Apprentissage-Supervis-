@@ -88,11 +88,10 @@ Les variables ont été séparées en deux groupes pour un traitement adapté :
 
 Un `ColumnTransformer` de Scikit-learn a été utilisé pour créer un pipeline robuste :
 
-1.  **Suppression de la colonne `Unnamed: 0`**: Cette colonne, un artefact d'indexation du fichier CSV, a été retirée des features pour ne pas introduire de bruit inutile.
-2.  **Encodage Cyclique de `key` :** La `key` (tonalité) est une variable cyclique. Nous la transformons en deux dimensions, `key_sin` et `key_cos`, pour que le modèle comprenne que la note 11 est aussi proche de 0 que de 10.
+  **Encodage Cyclique de `key` :** La `key` (tonalité) est une variable cyclique. Nous la transformons en deux dimensions, `key_sin` et `key_cos`, pour que le modèle comprenne que la note 11 est aussi proche de 0 que de 10.
     *   `key_sin = sin(2 * pi * key / 12)`
     *   `key_cos = cos(2 * pi * key / 12)`
-3.  **Features Polynomiales (degré 2) :** Nous ajoutons `PolynomialFeatures` au pipeline pour créer automatiquement des interactions (ex: `danceability²`, `energy * loudness`).
+  **Features Polynomiales (degré 2) :** Nous ajoutons `PolynomialFeatures` au pipeline pour créer automatiquement des interactions (ex: `danceability²`, `energy * loudness`).
 
 Ce pipeline est appliqué de manière identique sur les données d'entraînement et de test pour garantir la cohérence.
 
@@ -190,8 +189,6 @@ Hypothèse : Armés de notre pipeline de features avancées (Itération 4), nous
 
 Nous avons évalué deux implémentations de pointe, LightGBM et XGBoost, reconnues pour leur performance et leur gestion efficace de la régularisation. Pour ces modèles, nous avons également implémenté une recherche d'hyperparamètres (lightgbm_search, xgboost_search) afin de trouver la configuration optimale.
 
-Nous avons évalué deux implémentations de pointe, `LightGBM` et `XGBoost`, reconnues pour leur performance et leur gestion efficace de la régularisation.
-
   * **Résultat (`lightgbm_search`) :** **R² = 0.5202**.
   * **Résultat (`xgboost_search`) :** **R² = 0.5381**.
   * **Conclusion :** XGBoost surpasse légèrement LightGBM et Random Forest, établissant un meilleur score.
@@ -204,19 +201,12 @@ Nous avons évalué deux implémentations de pointe, `LightGBM` et `XGBoost`, re
 
 | Modèle | R² (test) | RMSE | Temps | Sur-apprentissage | Installation |
 |---|---|---|---|---|---|
-| **XGBoost (optimisé)** | **0.538** | **15.10** | ~3 min | Modéré (0.70-0.75) | ⚠️ **Optionnel** |
-| LightGBM (optimisé) | 0.520 | 15.40 | ~2 min | Modéré (0.70-0.75) | ⚠️ Optionnel |
-| Random Forest | 0.536 | 16.20 | ~5 min | Modéré (0.284) | ✅ Base |
-| Ridge Polynomial | 0.264 | 19.14 | ~30 sec | Aucun (0.004) | ✅ Base |
+| **XGBoost (optimisé)** | **0.538** | **15.10** | ~3 min | Modéré (0.70-0.75) | Optionnel |
+| LightGBM (optimisé) | 0.520 | 15.40 | ~2 min | Modéré (0.70-0.75) | Optionnel |
+| Random Forest | 0.536 | 16.20 | ~5 min | Modéré (0.284) | Base |
+| Ridge Polynomial | 0.264 | 19.14 | ~30 sec | Aucun (0.004) | Base |
 
 **Modèle le plus performant:** XGBoost optimisé (R² = 0.538)
-
-**Soumissions générées:**
-
-*   `submission_xgboost_search.csv` - R² = 0.538 (le plus performant)
-*   `submission_lightgbm_search.csv` - R² = 0.520
-*   `submission_random_forest.csv` - R² = 0.536
-*   `submission_polynomial_ridge.csv` - R² = 0.264
 
 ### 8.2. Optimisation XGBoost
 
@@ -240,9 +230,7 @@ XGBRegressor(
 )
 ```
 
-**Amélioration:** +254% vs baseline (0.152 → 0.538)
-
-**Note:** Sur-apprentissage modéré détecté (R² train = 0.70-0.75). Cependant, les performances en validation croisée restent excellentes.
+**Note:** Sur-apprentissage modéré détecté (R² train = 0.70-0.75). Cependant, les performances en validation croisée restent bonnes.
 
 ### 8.3. Optimisation LightGBM
 
@@ -265,19 +253,9 @@ LGBMRegressor(
 )
 ```
 
-**Amélioration:** +242% vs baseline (0.152 → 0.520)
-
 **Note:** Sur-apprentissage modéré détecté (R² train = 0.70-0.75). Cependant, les performances en validation croisée restent excellentes.
 
 ### 8.3. Choix Techniques
-
-#### Validation Croisée 3-fold
-
-**Justification:**
-
-*   Dataset large (85,500 observations)
-*   40% plus rapide que 5-fold
-*   Précision suffisante pour évaluation
 
 #### XGBoost avec 500 arbres
 
@@ -316,7 +294,7 @@ Ce projet a démontré l'importance d'une approche itérative :
 
 1.  L'**EDA** a été fondamentale, en identifiant la nature non-linéaire du problème.
 2.  Le **Feature Engineering** ciblé (encodage cyclique) a été plus impactant que l'ingénierie "en force" (polynomiale).
-3.  L'**Optimisation d'Hyperparamètres** a été cruciale, transformant un bon modèle (Random Forest par défaut) en un excellent modèle (+210% d'amélioration vs baseline).
+3.  L'**Optimisation d'Hyperparamètres** a été cruciale.
 
 Le modèle final `XGBoost` (R²=0.538) représente le meilleur compromis entre performance et robustesse pour ce challenge.
 
