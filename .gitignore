@@ -69,3 +69,5 @@ venv.bak/
 .roomodes
 *.joblib
 docs/CONTEXT.md
+*.pdf
+*.pkl
