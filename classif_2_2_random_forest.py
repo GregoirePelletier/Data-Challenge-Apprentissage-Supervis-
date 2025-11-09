@@ -15,28 +15,9 @@ from _export_model_report_pdf import export_model_report_pdf
 
 # min_samples_leaf : nombre minimum d’échantillons par feuille
 
-#______________________________________________________________________________
-#______________________________________________________________________________
-
-df = load_train()
-df.set_index('row_id', inplace=True)
-
-df_c = pd.get_dummies(data = df, \
-                         prefix = liste_var_categ, \
-                         columns = liste_var_categ)
-
-
-var = [x for x in df_c.columns if x not in target] ## Removing our target variable
-
-X_train, X_test, y_train, y_test = train_test_split(df_c[var], df[target],\
-                train_size = 0.8, random_state = RANDOM_STATE)
-
-
-min_samples_split_list = [2,10, 30, 50, 100, 200, 300, 700]  ## If the number is an integer, then it is the actual quantity of samples,
-                                             ## If it is a float, then it is the percentage of the dataset
+min_samples_split_list = [2,10, 30, 50, 100, 200, 300, 700]                                          
 max_depth_list = [2, 4, 8, 16, 32, 64, None]
 n_estimators_list = [10,50,100,500]
-
 
 #______________________________________________________________________________
 #______________________________________________________________________________
@@ -65,10 +46,10 @@ plt.show()
 
  # meilleur compromis : min_samples_split = 2
 
-
 #______________________________________________________________________________
 #______________________________________________________________________________
 # boucle sur  max_depth : profondeur max des arbres
+
 f1_list_train = []
 f1_list_test = []
 for max_depth in max_depth_list:
@@ -120,13 +101,20 @@ plt.show()
 
 #______________________________________________________________________________
 #______________________________________________________________________________
+# MODELE SELECTIONNE
+
+model_name = "classif_2_2_random_forest_mod"
 
 
-random_forest_model = RandomForestClassifier(n_estimators = 100,
+random_forest_model = RandomForestClassifier(n_estimators = 200,
                                              max_depth = 64, 
-                                             min_samples_split = 2).fit(X_train,y_train)
+                                             max_features = "sqrt",
+                                             min_samples_split = 2,
+                                             min_samples_leaf = 1).fit(X_train,y_train)
 
-print(f"Metrics train:\n\tf1: {f1_score(y_train,random_forest_model.predict(X_train),average="macro"):.4f}\nMetrics test:\n\tf1 score: {f1_score(y_test,random_forest_model.predict(X_test),average="macro"):.4f}")
+
+print(f"Metrics train:\n\tf1: {f1_score(y_train, random_forest_model.predict(X_train), average='macro'):.4f}\n"
+      f"Metrics test:\n\tf1 score: {f1_score(y_test, random_forest_model.predict(X_test), average='macro'):.4f}")
 
 # === Prédictions ===
 
@@ -145,7 +133,8 @@ plt.show()
 
 # === Export Resultat ===
 
-f1, acc, name, _ = export_model_report_pdf(random_forest_model, X_test, y_test, pdf_path= chemin_sortie+"\\classif_2_2_random_forest_model.pdf", 
+f1, acc, name, _ = export_model_report_pdf(random_forest_model, X_test, y_test, pdf_path= chemin_sortie+"\\"+model_name+".pdf", 
                                        title = "random_forest_model")
 
-print("f1:", f1, "| Modèle:", name)
+print("f1:", f1, "| Modèle:", model_name)
+print("acc:", acc, "| Modèle:", model_name)

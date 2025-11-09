@@ -5,9 +5,8 @@ Created on Tue Sep 30 13:56:48 2025
 @author: saout
 """
 
-
 import pandas as pd
-from sklearn.model_selection import train_test_split
+
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import accuracy_score, f1_score
 import matplotlib.pyplot as plt
@@ -15,32 +14,9 @@ from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 from _export_model_report_pdf import export_model_report_pdf
 import numpy as np
 
-#______________________________________________________________________________
-#______________________________________________________________________________
-
-df = load_train()
-df.set_index('row_id', inplace=True)
-
-df_c = pd.get_dummies(data = df, \
-                         prefix = liste_var_categ, \
-                         columns = liste_var_categ)
-
-
-
-
-var = [x for x in df_c.columns if x not in target] ## Removing our target variable
-
-X_train, X_test, y_train, y_test = train_test_split(df_c[var], df[target],
-                train_size = 0.8, random_state = RANDOM_STATE)
-
-
-print(f'train samples: {len(X_train)}\ntest samples: {len(X_test)}')
-print(f'target proportion train : {sum(y_train)/len(y_train):.4f}')
-print(f'target proportion test : {sum(y_test)/len(y_test):.4f}')
 
 min_samples_split_list = [2,10, 30, 50, 100, 200, 300, 700] ## If the number is an integer, then it is the actual quantity of samples,
 max_depth_list = [1,2, 3, 4, 8, 16, 32, 64, None] # None means that there is no depth limit.
-
 
 #______________________________________________________________________________
 #______________________________________________________________________________
@@ -66,7 +42,6 @@ plt.plot(f1_list_train)
 plt.plot(f1_list_test)
 plt.legend(['Train','Test'])
 plt.show()
-
 
 #______________________________________________________________________________
 #______________________________________________________________________________
@@ -104,6 +79,7 @@ decision_tree_model = DecisionTreeClassifier(min_samples_split = 10,
 print(f"Metrics train:\n\tf1: {f1_score(y_train,decision_tree_model.predict(X_train),average="macro"):.4f}\nMetrics test:\n\tf1 score: {f1_score(y_test,decision_tree_model.predict(X_test),average="macro"):.4f}")
 #print(f"Metrics train:\n\tAccuracy score: {accuracy_score(decision_tree_model.predict(X_train),y_train):.4f}\nMetrics test:\n\tAccuracy score: {accuracy_score(decision_tree_model.predict(X_test),y_test):.4f}")
 
+imp_vars = pd.Series(decision_tree_model.feature_importances_, index=X_train.columns).sort_values(ascending=False)
 
 # === Prédictions ===
 
@@ -122,7 +98,7 @@ plt.show()
 
 # === Export Resultat ===
 
-f1, acc, name, _ = export_model_report_pdf(decision_tree_model, X_test, y_test, pdf_path= chemin_sortie+"\\classif_2_1_decision_tree_model.pdf", 
+f1, acc, name, _ = export_model_report_pdf(decision_tree_model, X_test, y_test, pdf_path= chemin_sortie+"\\classif_2_1_decision_tree_model_feature_ing_2.pdf", 
                                        title = "decision_tree_model")
 
 print("f1:", f1, "| Modèle:", name)
