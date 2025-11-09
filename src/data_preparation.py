@@ -134,13 +134,16 @@ def get_feature_names(include_log_features=False, include_interactions=False):
         'valence', 'tempo', 'key_sin', 'key_cos'
     ]
 
-    # ... (le code pour include_log_features et include_interactions reste identique)
+    # Remplacer les features par leur version log si demandé
     if include_log_features:
-        log_features = [
-            'duration_ms_log', 'speechiness_log',
-            'liveness_log', 'instrumentalness_log'
-        ]
-        numeric_features.extend(log_features)
+        log_features_map = {
+            'duration_ms': 'duration_ms_log',
+            'speechiness': 'speechiness_log',
+            'liveness': 'liveness_log',
+            'instrumentalness': 'instrumentalness_log'
+        }
+        # Remplacer les anciennes features par les nouvelles
+        numeric_features = [log_features_map.get(f, f) for f in numeric_features]
 
     if include_interactions:
         interaction_features = [

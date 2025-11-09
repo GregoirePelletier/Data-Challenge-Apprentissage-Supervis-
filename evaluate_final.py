@@ -1,7 +1,7 @@
 """
 Script d'évaluation avec validation croisée pour comparer les modèles.
-
 Évalue les 4 modèles sélectionnés avec validation croisée 3-fold (allégé).
+NOTE : Cette version est mise à jour pour utiliser le Target Encoding pour 'track_genre'.
 """
 
 import pandas as pd
@@ -12,7 +12,6 @@ from sklearn.pipeline import Pipeline
 from sklearn.model_selection import cross_validate
 from sklearn.linear_model import RidgeCV
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.metrics import r2_score
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -27,8 +26,9 @@ from src.pipelines import create_simple_preprocessor, create_polynomial_preproce
 def load_optimized_model(model_name):
     """
     Charge un modèle optimisé sérialisé.
+    (CORRIGÉ : Cherche .joblib au lieu de .pkl)
     """
-    model_path = os.path.join('results', f'{model_name}_best_model.pkl')
+    model_path = os.path.join('results', f'best_model_{model_name}.joblib')
     if not os.path.exists(model_path):
         print(f"   ⚠️  Modèle {model_name} non trouvé à {model_path}. Veuillez exécuter train_final.py d'abord.")
         return None
@@ -39,12 +39,16 @@ def load_optimized_model(model_name):
 def evaluate_model(pipeline, X, y, model_name, cv_folds=3):
     """
     Évalue un modèle avec validation croisée.
+    (Cette fonction gère correctement le TargetEncoder grâce à cross_validate)
     """
     print(f"\nÉvaluation: {model_name}")
     print("-" * 60)
     
     scoring = ['r2', 'neg_mean_squared_error', 'neg_mean_absolute_error']
     
+    # cross_validate passe X et y au .fit() du pipeline,
+    # qui passe y au .fit() du preprocessor,
+    # qui passe y au .fit() du TargetEncoder.
     cv_results = cross_validate(
         pipeline, X, y,
         cv=cv_folds,
@@ -92,18 +96,22 @@ def main():
     # 1. Chargement des données
     print("1. Chargement des données...")
     train_df, _ = load_data()
-    train_df = initial_feature_engineering(train_df)
+    
+    # --- CORRECTION DE LA LOGIQUE D'EXTRACTION DES FEATURES ---
     # Activation de la transformation logarithmique et des interactions
+    # (Cohérent avec train_final.py)
     train_df = initial_feature_engineering(train_df, apply_log_transform=True, create_interactions=True)
     X_train, y_train = get_features_and_target(train_df)
 
-    # Mise à jour de la liste des features pour inclure les ajouts
-    numeric_features, categorical_features = get_feature_names(
+    # Mise à jour pour récupérer les 3 listes de features (Target Encoding)
+    numeric_features, ohe_features, target_encode_features = get_feature_names(
         include_log_features=True, 
-        include_interactions=True)
+        include_interactions=True
+    )
+    # --- FIN DE LA CORRECTION ---
     
     print(f"   Observations: {len(X_train):,}")
-    print(f"   Features: {X_train.shape[1]}")
+    print(f"   Features (avant preprocessing): {X_train.shape[1]}")
     print()
     
     # 2. Définir les modèles
@@ -111,20 +119,23 @@ def main():
     
     models = []
     
-    # Ridge Polynomial
+    # Ridge Polynomial (N'utilise PAS le Target Encoding)
+    # Il combine toutes les features cat. et les passe au OneHotEncoder
+    all_categorical_features = ohe_features + target_encode_features
     models.append({
         'name': 'Ridge Polynomial',
         'pipeline': Pipeline([
-            ('preprocessor', create_polynomial_preprocessor(numeric_features, categorical_features)),
+            ('preprocessor', create_polynomial_preprocessor(numeric_features, all_categorical_features)),
             ('regressor', RidgeCV(alphas=np.logspace(-2, 2, 10)))
         ])
     })
     
-    # Random Forest (version allégée pour évaluation)
+    # Random Forest (Utilise le Target Encoding)
     models.append({
         'name': 'Random Forest',
         'pipeline': Pipeline([
-            ('preprocessor', create_simple_preprocessor(numeric_features, categorical_features)),
+            # CORRECTION : Appel du preprocessor mis à jour
+            ('preprocessor', create_simple_preprocessor(numeric_features, ohe_features, target_encode_features)),
             ('regressor', RandomForestRegressor(
                 n_estimators=200,  # Réduit pour évaluation rapide
                 max_depth=None,
@@ -139,13 +150,14 @@ def main():
         ])
     })
     
-    # LightGBM
+    # LightGBM (Utilise le Target Encoding)
     try:
         from lightgbm import LGBMRegressor
         models.append({
             'name': 'LightGBM',
             'pipeline': Pipeline([
-                ('preprocessor', create_simple_preprocessor(numeric_features, categorical_features)),
+                # CORRECTION : Appel du preprocessor mis à jour
+                ('preprocessor', create_simple_preprocessor(numeric_features, ohe_features, target_encode_features)),
                 ('regressor', LGBMRegressor(
                     n_estimators=300,
                     learning_rate=0.05,
@@ -162,13 +174,14 @@ def main():
     except ImportError:
         print("   ⚠️  LightGBM non installé (pip install lightgbm)")
     
-    # XGBoost
+    # XGBoost (Utilise le Target Encoding)
     try:
         from xgboost import XGBRegressor
         models.append({
             'name': 'XGBoost',
             'pipeline': Pipeline([
-                ('preprocessor', create_simple_preprocessor(numeric_features, categorical_features)),
+                # CORRECTION : Appel du preprocessor mis à jour
+                ('preprocessor', create_simple_preprocessor(numeric_features, ohe_features, target_encode_features)),
                 ('regressor', XGBRegressor(
                     n_estimators=300,
                     learning_rate=0.05,
@@ -224,6 +237,8 @@ def main():
     print()
     
     # Sauvegarder les résultats
+    if not os.path.exists('results'):
+        os.makedirs('results')
     results_df.to_csv('results/evaluation_final.csv', index=False)
     print("✓ Résultats sauvegardés: results/evaluation_final.csv")
     print()
@@ -246,10 +261,12 @@ def main():
         print("✓ Modèle bien calibré, prêt pour la soumission")
     
     print()
-    print(f"Pour entraîner ce modèle:")
+    print(f"Pour entraîner ce modèle (ou sa version '_search'):")
     model_arg = best_model['model'].lower().replace(' ', '_')
     print(f"  python train_final.py --model {model_arg}")
+    if model_arg in ['random_forest', 'lightgbm', 'xgboost']:
+        print(f"  python train_final.py --model {model_arg}_search")
+
 
 if __name__ == "__main__":
     main()
-
