@@ -206,8 +206,8 @@ Nous avons évalué deux implémentations de pointe, `LightGBM` et `XGBoost`, re
 |---|---|---|---|---|---|
 | **XGBoost (optimisé)** | **0.538** | **15.10** | ~3 min | Modéré (0.70-0.75) | ⚠️ **Optionnel** |
 | LightGBM (optimisé) | 0.520 | 15.40 | ~2 min | Modéré (0.70-0.75) | ⚠️ Optionnel |
-| Random Forest | 0.472 | 16.20 | ~5 min | Modéré (0.284) | ✅ Base |
-| Ridge Polynomial | 0.536 | 19.14 | ~30 sec | Aucun (0.004) | ✅ Base |
+| Random Forest | 0.536 | 16.20 | ~5 min | Modéré (0.284) | ✅ Base |
+| Ridge Polynomial | 0.264 | 19.14 | ~30 sec | Aucun (0.004) | ✅ Base |
 
 **Modèle le plus performant:** XGBoost optimisé (R² = 0.538)
 
@@ -215,7 +215,7 @@ Nous avons évalué deux implémentations de pointe, `LightGBM` et `XGBoost`, re
 
 *   `submission_xgboost_search.csv` - R² = 0.538 (le plus performant)
 *   `submission_lightgbm_search.csv` - R² = 0.520
-*   `submission_random_forest.csv` - R² = 0.472
+*   `submission_random_forest.csv` - R² = 0.536
 *   `submission_polynomial_ridge.csv` - R² = 0.264
 
 ### 8.2. Optimisation XGBoost
