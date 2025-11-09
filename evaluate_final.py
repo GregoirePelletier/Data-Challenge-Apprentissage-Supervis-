@@ -36,7 +36,7 @@ from src.data_preparation import (
 from src.pipelines import (
     create_simple_preprocessor, 
     create_polynomial_preprocessor,
-    create_catboost_preprocessor # NOUVEAU
+    create_catboost_preprocessor
 )
 
 def evaluate_model(pipeline, X, y, model_name, cv_folds=3, fit_params=None):
@@ -129,30 +129,30 @@ def main():
         'fit_params': {}
     })
     
-    # Random Forest (Paramètres allégés pour évaluation rapide)
+    # Random Forest
     models.append({
         'name': 'Random Forest',
         'pipeline': Pipeline([
             ('preprocessor', create_simple_preprocessor(numeric_features, ohe_features, target_encode_features)),
             ('regressor', RandomForestRegressor(
-                n_estimators=200,  # Réduit
-                min_samples_leaf=5, # Valeur sûre
-                max_features='sqrt', # Rapide
-                bootstrap=False, # Utilise vos params optimisés
+                n_estimators=200, 
+                min_samples_leaf=5,
+                max_features='sqrt',
+                bootstrap=False,
                 random_state=42, n_jobs=-1, verbose=0
             ))
         ]),
         'fit_params': {}
     })
     
-    # LightGBM (Paramètres allégés pour évaluation rapide)
+    # LightGBM
     if LGBMRegressor:
         models.append({
             'name': 'LightGBM',
             'pipeline': Pipeline([
                 ('preprocessor', create_simple_preprocessor(numeric_features, ohe_features, target_encode_features)),
                 ('regressor', LGBMRegressor(
-                    n_estimators=300, # Réduit
+                    n_estimators=300,
                     learning_rate=0.2, 
                     max_depth=12,
                     num_leaves=127, 
@@ -162,14 +162,14 @@ def main():
             'fit_params': {}
         })
     
-    # XGBoost (Paramètres allégés pour évaluation rapide)
+    # XGBoost
     if XGBRegressor:
         models.append({
             'name': 'XGBoost',
             'pipeline': Pipeline([
                 ('preprocessor', create_simple_preprocessor(numeric_features, ohe_features, target_encode_features)),
                 ('regressor', XGBRegressor(
-                    n_estimators=300, # Réduit
+                    n_estimators=300,
                     learning_rate=0.1, 
                     max_depth=12,
                     subsample=0.7, 
@@ -194,11 +194,11 @@ def main():
             'pipeline': Pipeline([
                 ('preprocessor', create_catboost_preprocessor(numeric_features, ohe_features, target_encode_features)),
                 ('regressor', CatBoostRegressor(
-                    iterations=500, # Réduit pour évaluation rapide
+                    iterations=500,
                     learning_rate=0.1, depth=10,
                     loss_function='RMSE', eval_metric='R2',
                     random_seed=42, verbose=0,
-                    cat_features=cat_features_indices # CORRECTION: Utiliser les indices
+                    cat_features=cat_features_indices # Utiliser les indices
                 ))
             ]),
             'fit_params': {} # 'fit_params' est vide

@@ -26,14 +26,7 @@ def initial_feature_engineering(df, apply_log_transform=False, create_interactio
     if 'key' in df.columns:
         df['key_sin'] = np.sin(2 * np.pi * df['key']/12)
         df['key_cos'] = np.cos(2 * np.pi * df['key']/12)
-        # Nous conservons 'key' pour CatBoost, ne sera pas utilisé par les autres
         # df = df.drop('key', axis=1)
-
-    # Supprime les colonnes inutiles si elles existent
-    cols_to_drop = ['Unnamed: 0']
-    for col in cols_to_drop:
-        if col in df.columns:
-            df = df.drop(col, axis=1)
 
     # Transformation logarithmique pour les features asymétriques
     if apply_log_transform:
@@ -64,7 +57,7 @@ def initial_feature_engineering(df, apply_log_transform=False, create_interactio
         if 'energy' in df.columns and 'tempo' in df.columns:
             df['energy_tempo'] = df['energy'] * df['tempo']
 
-    # NOUVEAU: Création de features discrétisées (bins)
+    # Création de features discrétisées (bins)
     if create_bins:
         # Discrétise la durée en 10 quantiles
         if 'duration_ms' in df.columns:
@@ -119,7 +112,7 @@ def get_feature_names(include_log_features=False, include_interactions=False, in
     # Features pour One-Hot Encoding (faible cardinalité)
     ohe_features = ['mode', 'time_signature', 'explicit', 'key']
     
-    # NOUVEAU: Ajout des bins aux features OHE
+    # Ajout des bins aux features OHE
     if include_bins:
         ohe_features.extend(['duration_bin', 'tempo_bin'])
     

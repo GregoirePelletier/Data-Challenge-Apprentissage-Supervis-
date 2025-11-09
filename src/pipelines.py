@@ -33,7 +33,7 @@ def create_simple_preprocessor(numeric_features, ohe_features, target_encode_fea
     )
     return preprocessor
 
-# NOUVEAU: Préprocesseur spécifique pour CatBoost
+# Préprocesseur spécifique pour CatBoost
 def create_catboost_preprocessor(numeric_features, ohe_features, target_encode_features):
     """
     Crée un pipeline de prétraitement pour CatBoost :

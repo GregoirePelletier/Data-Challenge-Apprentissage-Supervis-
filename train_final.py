@@ -51,7 +51,7 @@ from src.data_preparation import (
 from src.pipelines import (
     create_simple_preprocessor, 
     create_polynomial_preprocessor,
-    create_catboost_preprocessor # NOUVEAU
+    create_catboost_preprocessor
 )
 
 # Définition du scorer R² pour RandomizedSearchCV
@@ -74,7 +74,7 @@ param_grid_random_forest = {
     'min_samples_split': [2, 5], 'min_samples_leaf': [2, 4, 6],
     'max_features': [0.5, 0.7, 'sqrt']
 }
-# NOUVELLE GRILLE POUR CATBOOST
+
 param_grid_catboost = {
     'depth': [6, 8, 10, 12],
     'learning_rate': [0.03, 0.05, 0.1, 0.2],
@@ -179,7 +179,7 @@ def get_model_and_preprocessor(model_name: str, numeric_features: list, ohe_feat
         if CatBoostRegressor is None: raise ImportError("CatBoost n'est pas installé.")
         print("Modèle: CatBoost (Gestion native des catégorielles)")
         
-        # CORRECTION: Calculer les INDICES des features catégorielles
+        # Calculer les INDICES des features catégorielles
         cat_features_indices = list(range(
             len(numeric_features), 
             len(numeric_features) + len(all_cat_features_for_catboost)
@@ -194,16 +194,16 @@ def get_model_and_preprocessor(model_name: str, numeric_features: list, ohe_feat
             eval_metric='R2',
             random_seed=42,
             verbose=100,
-            cat_features=cat_features_indices # CORRECTION: Utiliser les indices
+            cat_features=cat_features_indices # Utiliser les indices
         )
         preprocessor = create_catboost_preprocessor(numeric_features, ohe_features, target_encode_features)
     
-    # NOUVEAU: Cas pour CatBoost Search
+    # Cas pour CatBoost Search
     elif model_name == "catboost_search":
         if CatBoostRegressor is None: raise ImportError("CatBoost n'est pas installé.")
         print("Modèle: CatBoost (Recherche Hyperparamètres)")
         
-        # CORRECTION: Calculer les INDICES des features catégorielles
+        # Calculer les INDICES des features catégorielles
         cat_features_indices = list(range(
             len(numeric_features), 
             len(numeric_features) + len(all_cat_features_for_catboost)
@@ -214,7 +214,7 @@ def get_model_and_preprocessor(model_name: str, numeric_features: list, ohe_feat
             eval_metric='R2',
             random_seed=42,
             verbose=0,
-            cat_features=cat_features_indices # CORRECTION: Utiliser les indices
+            cat_features=cat_features_indices # Utiliser les indices
         )
 
         model = RandomizedSearchCV(
@@ -229,7 +229,7 @@ def get_model_and_preprocessor(model_name: str, numeric_features: list, ohe_feat
         )
         preprocessor = create_catboost_preprocessor(numeric_features, ohe_features, target_encode_features)
     
-    # Cas pour Stacking (MIS À JOUR AVEC VOS MEILLEURS PARAMÈTRES)
+    # Cas pour Stacking
     elif model_name == "stacking":
         if LGBMRegressor is None or XGBRegressor is None:
              raise ImportError("LGBM/XGB sont requis pour le stacking.")
@@ -239,7 +239,7 @@ def get_model_and_preprocessor(model_name: str, numeric_features: list, ohe_feat
         # 1. Définir le préprocesseur simple
         preprocessor_simple = create_simple_preprocessor(numeric_features, ohe_features, target_encode_features)
 
-        # 2. Définir les pipelines de base AVEC VOS NOUVEAUX PARAMS
+        # 2. Définir les pipelines de base
         
         # Pipeline XGBoost (R²=0.538)
         pipe_xgb = Pipeline([
@@ -320,7 +320,7 @@ def main(model_name):
     numeric_features, ohe_features, target_encode_features = get_feature_names(
         include_log_features=True, 
         include_interactions=True,
-        include_bins=True # NOUVEAU
+        include_bins=True
     )
     
     print(f"   Observations train: {len(X_train):,}")
@@ -421,7 +421,6 @@ if __name__ == "__main__":
     if XGBRegressor:
         models_available.extend(["xgboost", "xgboost_search"])
     if CatBoostRegressor:
-        # AJOUT DE CATBOOST_SEARCH
         models_available.extend(["catboost", "catboost_search"])
     if LGBMRegressor and XGBRegressor and RandomForestRegressor:
         models_available.append("stacking")
@@ -434,7 +433,6 @@ if __name__ == "__main__":
         "--model", 
         type=str, 
         required=True, 
-        # MISE À JOUR DE LA LISTE DE CHOIX
         choices=sorted(list(set(models_available))),
         help="Le modèle à entraîner."
     )
