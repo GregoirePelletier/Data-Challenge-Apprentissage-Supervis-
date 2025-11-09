@@ -291,12 +291,9 @@ Une étape de **clipping** a été ajoutée pour s'assurer que toutes les prédi
 ## 10\. Conclusion Générale
 
 Ce projet a démontré l'importance d'une approche itérative :
-
-1.  L'**EDA** a été fondamentale, en identifiant la nature non-linéaire du problème.
-2.  Le **Feature Engineering** ciblé (encodage cyclique) a été plus impactant que l'ingénierie "en force" (polynomiale).
-3.  L'**Optimisation d'Hyperparamètres** a été cruciale.
-
-Le modèle final `XGBoost` (R²=0.538) représente le meilleur compromis entre performance et robustesse pour ce challenge.
+L'EDA a été fondamentale, en identifiant la nature non-linéaire du problème.
+Le Feature Engineering (transformations Log, interactions, et binning…) a été crucial pour permettre aux modèles de trouver un signal.
+L'optimisation d'Hyperparamètres a été cruciale.
 
 -----
 
