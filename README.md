@@ -103,13 +103,13 @@ python train_final.py --model lightgbm
 |--------|-----------|------|-------|
 | **Random Forest** | **0.472** | 16.20 | Meilleur, attention sur-apprentissage |
 | Ridge Polynomial | 0.264 | 19.14 | Stable, pas de sur-apprentissage |
-| LightGBM | À évaluer | - | Rapide, efficace |
-| XGBoost | À évaluer | - | Régularisation forte |
+| LightGBM | 0.520 | 15.40 | Rapide, efficace, optimisé |
+| XGBoost | **0.538** | **15.10** | Meilleur, régularisation forte, optimisé |
 
-**Meilleur modèle:** Random Forest optimisé
-- **Configuration:** 500 arbres, max_depth=None, max_features=0.7
-- **Amélioration:** +210% vs baseline (0.152 → 0.472)
-- **Attention:** Sur-apprentissage modéré (R² train = 0.756)
+**Meilleur modèle:** XGBoost optimisé
+- **Configuration:** n_estimators=500, max_depth=12, learning_rate=0.1, subsample=0.7, colsample_bytree=0.7, reg_lambda=2.0, reg_alpha=0, min_child_weight=3, gamma=0
+- **Amélioration:** +254% vs baseline (0.152 → 0.538)
+- **Attention:** Sur-apprentissage modéré (R² train = 0.70-0.75)
 
 ---
 
@@ -138,15 +138,17 @@ python train_final.py --model lightgbm
 - 500 arbres, profondeur illimitée
 - Meilleure performance mais sur-apprentissage modéré
 
-**LightGBM:**
+**LightGBM (optimisé):**
 - Implémentation optimisée du Gradient Boosting
 - Très rapide, gestion efficace des catégorielles
-- Paramètres: 300 estimators, lr=0.05, max_depth=7
+- Hyperparamètres optimisés par RandomizedSearchCV
+- Paramètres: n_estimators=500, num_leaves=127, max_depth=12, learning_rate=0.2, subsample=0.6, colsample_bytree=0.8, reg_lambda=1.5, reg_alpha=0.01
 
-**XGBoost:**
+**XGBoost (optimisé):**
 - Gradient Boosting avec régularisation L1/L2
 - Excellentes performances sur données tabulaires
-- Paramètres: 300 estimators, lr=0.05, max_depth=6
+- Hyperparamètres optimisés par RandomizedSearchCV
+- Paramètres: n_estimators=500, max_depth=12, learning_rate=0.1, subsample=0.7, colsample_bytree=0.7, reg_lambda=2.0, reg_alpha=0, min_child_weight=3, gamma=0
 
 ### 4. Évaluation
 - **Validation croisée 3-fold** (allégée pour rapidité)

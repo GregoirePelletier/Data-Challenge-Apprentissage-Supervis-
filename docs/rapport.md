@@ -164,8 +164,9 @@ Nous avons évalué deux implémentations de pointe, LightGBM et XGBoost, reconn
 
 Nous avons évalué deux implémentations de pointe, `LightGBM` et `XGBoost`, reconnues pour leur performance et leur gestion efficace de la régularisation.
 
-  * **Résultat (`lightgbm` / `xgboost`) :** Les performances en validation croisée sont **très similaires** à celles du Random Forest, se situant dans la plage **R² ≈ 0.45 - 0.48**.
-  * **Conclusion :** Ces modèles confirment que nous avons atteint un plateau de performance robuste autour de R² ≈ 0.47.
+  * **Résultat (`lightgbm_search`) :** **R² = 0.5202**.
+  * **Résultat (`xgboost_search`) :** **R² = 0.5381**.
+  * **Conclusion :** XGBoost surpasse légèrement LightGBM et Random Forest, établissant un nouveau meilleur score.
 
 -----
 
@@ -175,40 +176,70 @@ Nous avons évalué deux implémentations de pointe, `LightGBM` et `XGBoost`, re
 
 | Modèle | R² (test) | RMSE | Temps | Sur-apprentissage | Installation |
 |---|---|---|---|---|---|
-| **Random Forest** | **0.472** | 16.20 | ~5 min | Modéré (0.284) | ✅ **Base** |
+| **XGBoost (optimisé)** | **0.538** | **15.10** | ~3 min | Modéré (0.70-0.75) | ⚠️ **Optionnel** |
+| LightGBM (optimisé) | 0.520 | 15.40 | ~2 min | Modéré (0.70-0.75) | ⚠️ Optionnel |
+| Random Forest | 0.472 | 16.20 | ~5 min | Modéré (0.284) | ✅ Base |
 | Ridge Polynomial | 0.264 | 19.14 | ~30 sec | Aucun (0.004) | ✅ Base |
-| LightGBM | ~0.45-0.48 | ~16-17 | ~2 min | ⚠️ Optionnel |
-| XGBoost | ~0.45-0.48 | ~16-17 | ~3 min | ⚠️ Optionnel |
 
-**Meilleur modèle:** Random Forest optimisé (R² = 0.472)
+**Meilleur modèle:** XGBoost optimisé (R² = 0.538)
 
 **Soumissions générées:**
 
-*   `submission_random_forest.csv` - R² = 0.472 (meilleur)
-*   `submission_polynomial_ridge.csv` - R² = 0.264 (stable)
+*   `submission_xgboost_search.csv` - R² = 0.538 (meilleur)
+*   `submission_lightgbm_search.csv` - R² = 0.520
+*   `submission_random_forest.csv` - R² = 0.472
+*   `submission_polynomial_ridge.csv` - R² = 0.264
 
-### 8.2. Optimisation Random Forest
+### 8.2. Optimisation XGBoost
 
-Les hyperparamètres du Random Forest ont été optimisés par RandomizedSearchCV (50 itérations, 5-fold CV):
+Les hyperparamètres du modèle XGBoost ont été optimisés par RandomizedSearchCV (100 itérations, 5-fold CV):
 
 **Hyperparamètres optimaux:**
 
 ```python
-RandomForestRegressor(
+XGBRegressor(
     n_estimators=500,
-    max_depth=None,
-    min_samples_split=2,
-    min_samples_leaf=5,
-    max_features=0.7,
-    bootstrap=True,
+    max_depth=12,
+    learning_rate=0.1,
+    subsample=0.7,
+    colsample_bytree=0.7,
+    reg_lambda=2.0,
+    reg_alpha=0,
+    min_child_weight=3,
+    gamma=0,
     random_state=42,
     n_jobs=-1
 )
 ```
 
-**Amélioration:** +210% vs baseline (0.152 → 0.472)
+**Amélioration:** +254% vs baseline (0.152 → 0.538)
 
-**Note:** Sur-apprentissage modéré détecté (R² train = 0.756, écart = 0.284). Cependant, les performances en validation croisée restent excellentes.
+**Note:** Sur-apprentissage modéré détecté (R² train = 0.70-0.75). Cependant, les performances en validation croisée restent excellentes.
+
+### 8.3. Optimisation LightGBM
+
+Les hyperparamètres du modèle LightGBM ont été optimisés par RandomizedSearchCV (100 itérations, 5-fold CV):
+
+**Hyperparamètres optimaux:**
+
+```python
+LGBMRegressor(
+    n_estimators=500,
+    num_leaves=127,
+    max_depth=12,
+    learning_rate=0.2,
+    subsample=0.6,
+    colsample_bytree=0.8,
+    reg_lambda=1.5,
+    reg_alpha=0.01,
+    random_state=42,
+    n_jobs=-1
+)
+```
+
+**Amélioration:** +242% vs baseline (0.152 → 0.520)
+
+**Note:** Sur-apprentissage modéré détecté (R² train = 0.70-0.75). Cependant, les performances en validation croisée restent excellentes.
 
 ### 8.3. Choix Techniques
 
@@ -220,25 +251,24 @@ RandomForestRegressor(
 *   40% plus rapide que 5-fold
 *   Précision suffisante pour évaluation
 
-#### Random Forest avec 500 arbres
+#### XGBoost avec 500 arbres
 
 **Justification:**
 
-*   Trouvé par optimisation exhaustive (50 itérations)
-*   Meilleure performance (R² = 0.472)
-*   Compromis temps/performance acceptable (~5 min)
+*   Trouvé par optimisation exhaustive (100 itérations)
+*   Meilleure performance (R² = 0.538)
+*   Compromis temps/performance acceptable (~3 min)
 
 ### 8.4. Recommandations
 
 **Pour maximiser le score Kaggle:**
 
-*   Utiliser Random Forest optimisé (R² = 0.472)
-*   Soumettre `submission_random_forest.csv`
+*   Utiliser XGBoost optimisé (R² = 0.538)
+*   Soumettre `submission_xgboost_search.csv`
 *   Surveiller le sur-apprentissage (score public vs privé)
 
 **Pour améliorer davantage (optionnel):**
 
-*   Tester LightGBM et XGBoost
 *   Implémenter ensemble methods (stacking/blending)
 *   Analyser les erreurs de prédiction
 
@@ -260,7 +290,7 @@ Ce projet a démontré l'importance d'une approche itérative :
 2.  Le **Feature Engineering** ciblé (encodage cyclique) a été plus impactant que l'ingénierie "en force" (polynomiale).
 3.  L'**Optimisation d'Hyperparamètres** a été cruciale, transformant un bon modèle (Random Forest par défaut) en un excellent modèle (+210% d'amélioration vs baseline).
 
-Le modèle final `Random Forest` (R²=0.472) représente le meilleur compromis entre performance et simplicité pour ce challenge.
+Le modèle final `XGBoost` (R²=0.538) représente le meilleur compromis entre performance et robustesse pour ce challenge.
 
 -----
 
@@ -283,6 +313,9 @@ python train_final.py --model random_forest
 
 # Entraîner le meilleur modèle (Linear)
 python train_final.py --model polynomial_ridge
+
+# Lancer une recherche d'hyperparamètres pour LightGBM
+python train_final.py --model lightgbm_search
 
 # Lancer une recherche d'hyperparamètres pour XGBoost
 python train_final.py --model xgboost_search

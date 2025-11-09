@@ -106,10 +106,10 @@ python train_final.py --model xgboost
 |--------|-----------|------|-------|--------------|
 | **Random Forest** | **0.472** | 16.20 | ~5 min | ✅ Base |
 | Ridge Polynomial | 0.264 | 19.14 | ~30 sec | ✅ Base |
-| LightGBM | ~0.45-0.48 | ~16-17 | ~2 min | ⚠️ Optionnel |
-| XGBoost | ~0.45-0.48 | ~16-17 | ~3 min | ⚠️ Optionnel |
+| LightGBM | 0.520 | 15.40 | ~2 min | ⚠️ Optionnel |
+| XGBoost | **0.538** | **15.10** | ~3 min | ⚠️ Optionnel |
 
-**Recommandation:** Commencer avec **Random Forest** (meilleur résultat, pas d'installation supplémentaire)
+**Recommandation:** Commencer avec **XGBoost** (meilleur résultat, nécessite installation) ou **Random Forest** (bon résultat, pas d'installation supplémentaire)
 
 ---
 
@@ -142,10 +142,14 @@ python train_final.py --model xgboost
 ### Cas 1: Je veux le meilleur score Kaggle
 
 ```bash
-python train_final.py --model random_forest
+# Installer XGBoost
+python -m pip install xgboost
+
+# Entraîner XGBoost (meilleur modèle)
+python train_final.py --model xgboost_search
 ```
 
-**Résultat:** R² = 0.472 (meilleur modèle)
+**Résultat:** R² = 0.538 (meilleur modèle)
 
 ### Cas 2: Je veux un modèle rapide et stable
 
@@ -216,8 +220,8 @@ results/evaluation_final.csv
 
 ### Pour Maximiser le Score Kaggle
 
-1. ✅ **Utiliser Random Forest** (R² = 0.472)
-2. ✅ **Soumettre `submission_random_forest.csv`**
+1. ✅ **Utiliser XGBoost** (R² = 0.538)
+2. ✅ **Soumettre `submission_xgboost_search.csv`**
 3. ⚠️ **Attention au sur-apprentissage** (surveiller le score public vs privé)
 
 ### Pour la Présentation
@@ -262,24 +266,27 @@ python train_final.py --model polynomial_ridge
 
 ### Résultats
 
-- **Meilleur modèle:** Random Forest (R² = 0.472)
-- **Fichier de soumission:** `submission_random_forest.csv`
-- **Temps total:** ~5 minutes
+- **Meilleur modèle:** XGBoost (R² = 0.538)
+- **Fichier de soumission:** `submission_xgboost_search.csv`
+- **Temps total:** ~3 minutes
 
 ---
 
 ## 🎉 Conclusion
 
-**Pour un data challenge académique, Random Forest est le meilleur choix:**
+**Pour un data challenge académique, XGBoost est le meilleur choix:**
 
-✅ **Performance:** R² = 0.472 (meilleur résultat)  
-✅ **Simplicité:** Pas d'installation supplémentaire  
-✅ **Rapidité:** ~5 minutes d'entraînement  
-✅ **Prêt:** Fichier de soumission généré automatiquement  
+✅ **Performance:** R² = 0.538 (meilleur résultat)
+✅ **Rapidité:** ~3 minutes d'entraînement
+✅ **Prêt:** Fichier de soumission généré automatiquement
 
-**Commande unique:**
+**Commandes:**
 ```bash
-python train_final.py --model random_forest
+# Installer XGBoost
+python -m pip install xgboost
+
+# Entraîner le modèle
+python train_final.py --model xgboost_search
 ```
 
 **Bonne chance pour le challenge ! 🚀**

@@ -1,12 +1,10 @@
 """
 Script d'évaluation avec validation croisée pour comparer les modèles.
-Évalue les 4 modèles sélectionnés avec validation croisée 3-fold (allégé).
-NOTE : Cette version est mise à jour pour utiliser le Target Encoding pour 'track_genre'.
+Utilise le Target Encoding et le nouveau CatBoost.
 """
 
 import pandas as pd
 import numpy as np
-import joblib
 import os
 from sklearn.pipeline import Pipeline
 from sklearn.model_selection import cross_validate
@@ -15,55 +13,64 @@ from sklearn.ensemble import RandomForestRegressor
 import warnings
 warnings.filterwarnings('ignore')
 
+# Import des modèles de boosting
+try:
+    from lightgbm import LGBMRegressor
+except ImportError:
+    LGBMRegressor = None
+try:
+    from xgboost import XGBRegressor
+except ImportError:
+    XGBRegressor = None
+try:
+    from catboost import CatBoostRegressor
+except ImportError:
+    CatBoostRegressor = None
+
 from src.data_preparation import (
     load_data,
     initial_feature_engineering,
     get_features_and_target,
     get_feature_names
 )
-from src.pipelines import create_simple_preprocessor, create_polynomial_preprocessor
+from src.pipelines import (
+    create_simple_preprocessor, 
+    create_polynomial_preprocessor,
+    create_catboost_preprocessor # NOUVEAU
+)
 
-def load_optimized_model(model_name):
-    """
-    Charge un modèle optimisé sérialisé.
-    (CORRIGÉ : Cherche .joblib au lieu de .pkl)
-    """
-    model_path = os.path.join('results', f'best_model_{model_name}.joblib')
-    if not os.path.exists(model_path):
-        print(f"   ⚠️  Modèle {model_name} non trouvé à {model_path}. Veuillez exécuter train_final.py d'abord.")
-        return None
-    with open(model_path, 'rb') as f:
-        model = joblib.load(f)
-    return model
-
-def evaluate_model(pipeline, X, y, model_name, cv_folds=3):
+def evaluate_model(pipeline, X, y, model_name, cv_folds=3, fit_params=None):
     """
     Évalue un modèle avec validation croisée.
-    (Cette fonction gère correctement le TargetEncoder grâce à cross_validate)
+    Gère le TargetEncoder (qui a besoin de 'y') et les fit_params (pour CatBoost).
     """
+    if fit_params is None:
+        fit_params = {}
+        
     print(f"\nÉvaluation: {model_name}")
     print("-" * 60)
     
-    scoring = ['r2', 'neg_mean_squared_error', 'neg_mean_absolute_error']
+    scoring = ['r2', 'neg_mean_squared_error']
     
-    # cross_validate passe X et y au .fit() du pipeline,
-    # qui passe y au .fit() du preprocessor,
-    # qui passe y au .fit() du TargetEncoder.
-    cv_results = cross_validate(
-        pipeline, X, y,
-        cv=cv_folds,
-        scoring=scoring,
-        return_train_score=True,
-        n_jobs=-1,
-        verbose=0
-    )
+    try:
+        cv_results = cross_validate(
+            pipeline, X, y,
+            cv=cv_folds,
+            scoring=scoring,
+            return_train_score=True,
+            n_jobs=-1,
+            verbose=0,
+            **fit_params # Passe les paramètres au .fit()
+        )
+    except Exception as e:
+        print(f"ERREUR lors de l'évaluation de {model_name}: {e}")
+        return None
     
     # Calculer les métriques
     test_r2 = cv_results['test_r2'].mean()
     test_r2_std = cv_results['test_r2'].std()
     test_rmse = np.sqrt(-cv_results['test_neg_mean_squared_error']).mean()
     train_r2 = cv_results['train_r2'].mean()
-    
     overfit = train_r2 - test_r2
     
     print(f"R² (test):  {test_r2:.4f} ± {test_r2_std:.4f}")
@@ -71,12 +78,8 @@ def evaluate_model(pipeline, X, y, model_name, cv_folds=3):
     print(f"RMSE:       {test_rmse:.2f}")
     print(f"Écart:      {overfit:.4f}", end="")
     
-    if overfit > 0.1:
-        print(" ⚠️  Sur-apprentissage")
-    elif overfit < 0.01:
-        print(" ✓ Excellent")
-    else:
-        print(" ✓ Bon")
+    if overfit > 0.1: print(" Sur-apprentissage")
+    else: print(" OK")
     
     return {
         'model': model_name,
@@ -91,27 +94,23 @@ def main():
     print("="*80)
     print("ÉVALUATION DES MODÈLES - VALIDATION CROISÉE 3-FOLD")
     print("="*80)
-    print()
     
     # 1. Chargement des données
     print("1. Chargement des données...")
     train_df, _ = load_data()
     
-    # --- CORRECTION DE LA LOGIQUE D'EXTRACTION DES FEATURES ---
-    # Activation de la transformation logarithmique et des interactions
-    # (Cohérent avec train_final.py)
-    train_df = initial_feature_engineering(train_df, apply_log_transform=True, create_interactions=True)
+    # Activation de toutes les features (Log, Interactions, Bins)
+    train_df = initial_feature_engineering(train_df, apply_log_transform=True, create_interactions=True, create_bins=True)
     X_train, y_train = get_features_and_target(train_df)
 
-    # Mise à jour pour récupérer les 3 listes de features (Target Encoding)
+    # Récupérer les listes de features
     numeric_features, ohe_features, target_encode_features = get_feature_names(
         include_log_features=True, 
-        include_interactions=True
+        include_interactions=True,
+        include_bins=True
     )
-    # --- FIN DE LA CORRECTION ---
     
     print(f"   Observations: {len(X_train):,}")
-    print(f"   Features (avant preprocessing): {X_train.shape[1]}")
     print()
     
     # 2. Définir les modèles
@@ -119,111 +118,119 @@ def main():
     
     models = []
     
-    # Ridge Polynomial (N'utilise PAS le Target Encoding)
-    # Il combine toutes les features cat. et les passe au OneHotEncoder
-    all_categorical_features = ohe_features + target_encode_features
+    # Ridge Polynomial
+    all_ohe_features = ohe_features + target_encode_features
     models.append({
         'name': 'Ridge Polynomial',
         'pipeline': Pipeline([
-            ('preprocessor', create_polynomial_preprocessor(numeric_features, all_categorical_features)),
+            ('preprocessor', create_polynomial_preprocessor(numeric_features, all_ohe_features)),
             ('regressor', RidgeCV(alphas=np.logspace(-2, 2, 10)))
-        ])
+        ]),
+        'fit_params': {}
     })
     
-    # Random Forest (Utilise le Target Encoding)
+    # Random Forest (Paramètres allégés pour évaluation rapide)
     models.append({
         'name': 'Random Forest',
         'pipeline': Pipeline([
-            # CORRECTION : Appel du preprocessor mis à jour
             ('preprocessor', create_simple_preprocessor(numeric_features, ohe_features, target_encode_features)),
             ('regressor', RandomForestRegressor(
-                n_estimators=200,  # Réduit pour évaluation rapide
-                max_depth=None,
-                min_samples_split=2,
-                min_samples_leaf=5,
-                max_features=0.7,
-                bootstrap=True,
-                random_state=42,
-                n_jobs=-1,
-                verbose=0
+                n_estimators=200,  # Réduit
+                min_samples_leaf=5, # Valeur sûre
+                max_features='sqrt', # Rapide
+                bootstrap=False, # Utilise vos params optimisés
+                random_state=42, n_jobs=-1, verbose=0
             ))
-        ])
+        ]),
+        'fit_params': {}
     })
     
-    # LightGBM (Utilise le Target Encoding)
-    try:
-        from lightgbm import LGBMRegressor
+    # LightGBM (Paramètres allégés pour évaluation rapide)
+    if LGBMRegressor:
         models.append({
             'name': 'LightGBM',
             'pipeline': Pipeline([
-                # CORRECTION : Appel du preprocessor mis à jour
                 ('preprocessor', create_simple_preprocessor(numeric_features, ohe_features, target_encode_features)),
                 ('regressor', LGBMRegressor(
-                    n_estimators=300,
-                    learning_rate=0.05,
-                    max_depth=7,
-                    num_leaves=31,
-                    subsample=0.8,
-                    colsample_bytree=0.8,
-                    random_state=42,
-                    n_jobs=-1,
-                    verbose=-1
+                    n_estimators=300, # Réduit
+                    learning_rate=0.2, 
+                    max_depth=12,
+                    num_leaves=127, 
+                    random_state=42, n_jobs=-1, verbose=-1
                 ))
-            ])
+            ]),
+            'fit_params': {}
         })
-    except ImportError:
-        print("   ⚠️  LightGBM non installé (pip install lightgbm)")
     
-    # XGBoost (Utilise le Target Encoding)
-    try:
-        from xgboost import XGBRegressor
+    # XGBoost (Paramètres allégés pour évaluation rapide)
+    if XGBRegressor:
         models.append({
             'name': 'XGBoost',
             'pipeline': Pipeline([
-                # CORRECTION : Appel du preprocessor mis à jour
                 ('preprocessor', create_simple_preprocessor(numeric_features, ohe_features, target_encode_features)),
                 ('regressor', XGBRegressor(
-                    n_estimators=300,
-                    learning_rate=0.05,
-                    max_depth=6,
-                    subsample=0.8,
-                    colsample_bytree=0.8,
-                    reg_alpha=0.1,
-                    reg_lambda=1.0,
-                    random_state=42,
-                    n_jobs=-1,
-                    verbosity=0
+                    n_estimators=300, # Réduit
+                    learning_rate=0.1, 
+                    max_depth=12,
+                    subsample=0.7, 
+                    colsample_bytree=0.7,
+                    random_state=42, n_jobs=-1, verbosity=0
                 ))
-            ])
+            ]),
+            'fit_params': {}
         })
-    except ImportError:
-        print("   ⚠️  XGBoost non installé (pip install xgboost)")
+
+    # CatBoost
+    if CatBoostRegressor:
+        # Calculer les INDICES des features cat. APRES le ColumnTransformer
+        all_cat_features_names = ohe_features + target_encode_features
+        cat_features_indices = list(range(
+            len(numeric_features), 
+            len(numeric_features) + len(all_cat_features_names)
+        ))
+        
+        models.append({
+            'name': 'CatBoost',
+            'pipeline': Pipeline([
+                ('preprocessor', create_catboost_preprocessor(numeric_features, ohe_features, target_encode_features)),
+                ('regressor', CatBoostRegressor(
+                    iterations=500, # Réduit pour évaluation rapide
+                    learning_rate=0.1, depth=10,
+                    loss_function='RMSE', eval_metric='R2',
+                    random_seed=42, verbose=0,
+                    cat_features=cat_features_indices # CORRECTION: Utiliser les indices
+                ))
+            ]),
+            'fit_params': {} # 'fit_params' est vide
+        })
     
     print(f"   {len(models)} modèles configurés")
     print()
     
     # 3. Évaluer les modèles
     print("3. Évaluation avec validation croisée (3-fold)...")
-    print("   (Cela peut prendre 5-10 minutes...)")
+    print("   (Peut prendre plusieurs minutes...)")
     
     results = []
     for model_config in models:
         result = evaluate_model(
-            model_config['pipeline'],
-            X_train,
-            y_train,
-            model_config['name'],
-            cv_folds=3
+            model_config['pipeline'], X_train, y_train,
+            model_config['name'], cv_folds=3,
+            fit_params=model_config['fit_params']
         )
-        results.append(result)
+        if result:
+            results.append(result)
     
     # 4. Afficher le résumé
     print()
     print("="*80)
     print("RÉSUMÉ DES RÉSULTATS")
     print("="*80)
-    print()
     
+    if not results:
+        print("Aucun modèle n'a été évalué. Vérifiez les imports (LGBM, XGB, CatBoost).")
+        return
+
     results_df = pd.DataFrame(results)
     results_df = results_df.sort_values('test_r2_mean', ascending=False)
     
@@ -236,7 +243,6 @@ def main():
     
     print()
     
-    # Sauvegarder les résultats
     if not os.path.exists('results'):
         os.makedirs('results')
     results_df.to_csv('results/evaluation_final.csv', index=False)
@@ -246,27 +252,16 @@ def main():
     # Recommandation
     best_model = results_df.iloc[0]
     print("="*80)
-    print("RECOMMANDATION")
+    print("RECOMMANDATION (BASÉE SUR L'ÉVALUATION)")
     print("="*80)
-    print()
-    print(f"Meilleur modèle: {best_model['model']}")
+    print(f"Meilleur modèle de base: {best_model['model']}")
     print(f"R² (test): {best_model['test_r2_mean']:.4f}")
-    print(f"RMSE: {best_model['test_rmse_mean']:.2f}")
     print()
-    
-    if best_model['overfit'] > 0.1:
-        print("⚠️  Attention: Sur-apprentissage détecté")
-        print("   Considérer une régularisation plus forte ou réduire la complexité")
-    else:
-        print("✓ Modèle bien calibré, prêt pour la soumission")
-    
-    print()
-    print(f"Pour entraîner ce modèle (ou sa version '_search'):")
-    model_arg = best_model['model'].lower().replace(' ', '_')
-    print(f"  python train_final.py --model {model_arg}")
-    if model_arg in ['random_forest', 'lightgbm', 'xgboost']:
-        print(f"  python train_final.py --model {model_arg}_search")
-
+    print("Considérez d'entraîner le modèle 'stacking' pour la soumission finale,")
+    print("car il combine la force de plusieurs de ces modèles de base.")
+    print("\nExemples de commandes d'entraînement final :")
+    print(f"  python train_final.py --model {best_model['model'].lower().replace(' ', '_')}")
+    print(f"  python train_final.py --model stacking")
 
 if __name__ == "__main__":
     main()
