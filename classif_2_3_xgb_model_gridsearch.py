@@ -1,3 +1,5 @@
+# Classif 2.3 : Random Forrest Gridsearch 
+
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import f1_score
 import xgboost as xgb
@@ -50,27 +52,21 @@ for combo in sampled_combos:
         early_stopping_rounds=50,
         verbose=False
     )
-    f1 = f1_score(y_val, model.predict(X_val), average="macro")
+    f1 = f1_score(y_val, model.predict(X_val), average="weighted")
 
     if f1 > best_score:
         best_score, best_model, best_params = f1, model, params
 
     i=i+1
 
-print("Best F1-macro:", round(best_score, 4))
+print("Best F1:", round(best_score, 4))
 print("Best params:", best_params)
-
-
-
 
 #______________________________________________________________________________
 #______________________________________________________________________________
 # MODELE SELECTIONNE
 
-# Best params: {'max_depth': 7, 'learning_rate': 0.05, 'subsample': 0.8, 'colsample_bytree': 1.0}
-#Best params: {'max_depth': 8, 'learning_rate': 0.1, 'subsample': 1.0, 'colsample_bytree': 1.0, 'min_child_weight': 1, 'gamma': 0.1, 'reg_lambda': 2, 'reg_alpha': 0.1}
-
-model_name = "classif_2_2_random_forest_mod_2"
+model_name = "classif_2_3_xgb_model_grille"
 
 xgb_model = xgb.XGBClassifier(
     learning_rate = 0.105,
@@ -84,7 +80,7 @@ xgb_model = xgb.XGBClassifier(
     random_state=RANDOM_STATE,
     objective="multi:softprob",
     num_class=3,
-    eval_metric="mlogloss"     # 👉 early stopping basé sur log-loss
+    eval_metric="mlogloss"     
 )
 
 xgb_model.fit(
@@ -94,14 +90,13 @@ xgb_model.fit(
     verbose=True
 )
 
-
-print(f"Metrics train:\n\tf1: {f1_score(y_train, xgb_model.predict(X_train), average='macro'):.4f}\n"
-      f"Metrics test:\n\tf1 score: {f1_score(y_test, xgb_model.predict(X_test), average='macro'):.4f}")
+print(f"Metrics train:\n\tf1: {f1_score(y_train, xgb_model.predict(X_train), average='weighted'):.4f}\n"
+      f"Metrics test:\n\tf1 score: {f1_score(y_test, xgb_model.predict(X_test), average='weighted'):.4f}")
 
 # === Prédictions ===
 
-predictions_train = xgb_model.predict(X_train) ## The predicted values for the train dataset
-predictions_test = xgb_model.predict(X_test) ## The predicted values for the test dataset
+predictions_train = xgb_model.predict(X_train) 
+predictions_test = xgb_model.predict(X_test)
 
 # === Matrice de confusion brute ===
 
@@ -115,8 +110,9 @@ plt.show()
 
 # === Export Resultat ===
 
-f1, acc, name, _ = export_model_report_pdf(xgb_model, X_test, y_test, pdf_path= chemin_sortie+"\\classif_2_3_xgb_model.pdf", 
+f1, acc, name, _ = export_model_report_pdf(xgb_model, X_test, y_test, 
+                                           pdf_path= str(chemin_sortie / "classif_2_3_xgb_model_grille.pdf"),
                                        title = "xgb_model")
 
-print("f1:", f1, "| Modèle:", name)
+print("f1:", f1, "| Modèle:", model_name)
 

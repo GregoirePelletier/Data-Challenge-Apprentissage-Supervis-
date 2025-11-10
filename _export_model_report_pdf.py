@@ -4,31 +4,39 @@ Created on Tue Sep 30 15:58:29 2025
 
 @author: saout
 """
-
+from pathlib import Path
 from reportlab.lib.pagesizes import A4
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib import colors
 from reportlab.lib.units import mm
+from sklearn.metrics import accuracy_score, f1_score
+from typing import Union
 
-from sklearn.metrics import accuracy_score
-from sklearn.metrics import f1_score
-
-
-
-def export_model_report_pdf(estimator, X_test, y_test, pdf_path: str, title: str = "Model Report"):
+def export_model_report_pdf(
+    estimator,
+    X_test,
+    y_test,
+    pdf_path: Union[str, Path],
+    title: str = "Model Report"
+):
     """
-    - Calcule l'accuracy sur X_test,y_test
-    - Extrait le nom du modèle + ses paramètres (get_params)
-    - Écrit un PDF compact à pdf_path
-    Retourne (accuracy, model_name, params_dict)
+    - Calcule Accuracy et F1_weighted sur (X_test, y_test)
+    - Affiche le nom du modèle + ses hyperparamètres (get_params)
+    - Écrit un PDF compact à `pdf_path` (création auto du dossier)
+
+    Retourne: (f1_weighted: float, accuracy: float, model_name: str, params_dict: dict)
     """
+    # --- compat Path & création du dossier ---
+    pdf_path = Path(pdf_path)
+    pdf_path.parent.mkdir(parents=True, exist_ok=True)
 
-
+    # --- métriques ---
     y_pred = estimator.predict(X_test)
     acc = accuracy_score(y_test, y_pred)
-    f1 = f1_score(y_test,y_pred, average="macro")
+    f1w = f1_score(y_test, y_pred, average="weighted")
 
+    # --- styles & en-tête ---
     styles = getSampleStyleSheet()
     title_style = styles["Title"]
     normal = styles["BodyText"]
@@ -41,9 +49,10 @@ def export_model_report_pdf(estimator, X_test, y_test, pdf_path: str, title: str
     model_name = estimator.__class__.__name__
     elements.append(Paragraph(f"<b>Modèle&nbsp;:</b> {model_name}", normal))
     elements.append(Paragraph(f"<b>Accuracy (test)&nbsp;:</b> {acc:.4f}", normal))
-    elements.append(Paragraph(f"<b>F1 (test)&nbsp;:</b> {f1:.4f}", normal))
+    elements.append(Paragraph(f"<b>F1_weighted (test)&nbsp;:</b> {f1w:.4f}", normal))
     elements.append(Spacer(1, 6))
 
+    # --- paramètres du modèle ---
     params = estimator.get_params(deep=True)
     rows = [["Paramètre", "Valeur"]]
     for k, v in sorted(params.items(), key=lambda x: x[0]):
@@ -64,6 +73,8 @@ def export_model_report_pdf(estimator, X_test, y_test, pdf_path: str, title: str
     elements.append(Paragraph("<b>Paramètres du modèle</b>", heading))
     elements.append(table)
 
-    doc = SimpleDocTemplate(pdf_path, pagesize=A4)
+    # --- génération PDF ---
+    doc = SimpleDocTemplate(str(pdf_path), pagesize=A4)
     doc.build(elements)
-    return f1, acc, model_name, params
+
+    return f1w, acc, model_name, params

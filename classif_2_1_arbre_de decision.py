@@ -1,12 +1,7 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Sep 30 13:56:48 2025
-
-@author: saout
-"""
+# Classif 2.1 : Arbre de décision (entraienment & ptimisation)
+#               Optimisation sur min_samples_split & max_depth
 
 import pandas as pd
-
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import accuracy_score, f1_score
 import matplotlib.pyplot as plt
@@ -20,7 +15,7 @@ max_depth_list = [1,2, 3, 4, 8, 16, 32, 64, None] # None means that there is no 
 
 #______________________________________________________________________________
 #______________________________________________________________________________
-# boucle sur  min_samples_split
+# Boucle sur  min_samples_split
 
 f1_list_train = []
 f1_list_test = []
@@ -29,8 +24,8 @@ for min_samples_split in min_samples_split_list:
                                    random_state = RANDOM_STATE).fit(X_train,y_train) 
     predictions_train = model.predict(X_train)
     predictions_test = model.predict(X_test)
-    f1_train = f1_score(y_train, predictions_train, average="macro")   
-    f1_test = f1_score(y_test, predictions_test, average="macro")      
+    f1_train = f1_score(y_train, predictions_train, average="weighted")   
+    f1_test = f1_score(y_test, predictions_test, average="weighted")      
     f1_list_train.append(f1_train)
     f1_list_test.append(f1_test)
 
@@ -54,8 +49,8 @@ for max_depth in max_depth_list:
                                    random_state = RANDOM_STATE).fit(X_train,y_train) 
     predictions_train = model.predict(X_train)
     predictions_test = model.predict(X_test)
-    f1_train = f1_score(y_train, predictions_train, average="macro")   
-    f1_test = f1_score(y_test, predictions_test, average="macro")      
+    f1_train = f1_score(y_train, predictions_train, average="weighted")   
+    f1_test = f1_score(y_test, predictions_test, average="weighted")      
     f1_list_train.append(f1_train)
     f1_list_test.append(f1_test)
 
@@ -76,7 +71,7 @@ decision_tree_model = DecisionTreeClassifier(min_samples_split = 10,
                                              max_depth = 16,
                                              random_state = RANDOM_STATE).fit(X_train,y_train)
 
-print(f"Metrics train:\n\tf1: {f1_score(y_train,decision_tree_model.predict(X_train),average="macro"):.4f}\nMetrics test:\n\tf1 score: {f1_score(y_test,decision_tree_model.predict(X_test),average="macro"):.4f}")
+print(f"Metrics train:\n\tf1: {f1_score(y_train,decision_tree_model.predict(X_train),average="weighted"):.4f}\nMetrics test:\n\tf1 score: {f1_score(y_test,decision_tree_model.predict(X_test),average="weighted"):.4f}")
 #print(f"Metrics train:\n\tAccuracy score: {accuracy_score(decision_tree_model.predict(X_train),y_train):.4f}\nMetrics test:\n\tAccuracy score: {accuracy_score(decision_tree_model.predict(X_test),y_test):.4f}")
 
 imp_vars = pd.Series(decision_tree_model.feature_importances_, index=X_train.columns).sort_values(ascending=False)
@@ -91,15 +86,16 @@ predictions_test = decision_tree_model.predict(X_test) ## The predicted values f
 cm = confusion_matrix(y_test, predictions_test)
 print(cm)
 
-disp = ConfusionMatrixDisplay(confusion_matrix=cm,
-                              display_labels=decision_tree_model.classes_)
+disp = ConfusionMatrixDisplay(confusion_matrix=cm,display_labels=decision_tree_model.classes_)
 disp.plot(cmap="Greens")
 plt.show()
 
 # === Export Resultat ===
 
-f1, acc, name, _ = export_model_report_pdf(decision_tree_model, X_test, y_test, pdf_path= chemin_sortie+"\\classif_2_1_decision_tree_model_feature_ing_2.pdf", 
-                                       title = "decision_tree_model")
+f1, acc, name, _ = export_model_report_pdf(decision_tree_model,X_test, y_test,
+    pdf_path=str(chemin_sortie / "classif_2_1_decision_tree_model.pdf"),
+    title="decision_tree_model"
+)
 
 print("f1:", f1, "| Modèle:", name)
 
@@ -109,28 +105,5 @@ print("f1:", f1, "| Modèle:", name)
 
 
 
-
-
-#######################
-### Predicteur Naif ###
-#######################
-
-n = len(predictions_test)+1  # taille du vecteur
-p0, p1 = 0.63, 0.37
-
-# Générer un vecteur avec les proportions exactes
-vec = np.array([0]*(int(n*p0)) + [1]*(int(n*p1)))
-np.random.shuffle(vec)
-
-cm_naif = confusion_matrix(y_test, vec)
-print(cm_naif)
-
-disp = ConfusionMatrixDisplay(confusion_matrix=cm_naif,
-                              display_labels=model.classes_)
-disp.plot(cmap="Greens")
-plt.show()
-
-accuracy_naive = np.trace(cm_naif) / np.sum(cm_naif)
-print(accuracy_naive)
 
 

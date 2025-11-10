@@ -1,11 +1,7 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Sep 30 09:56:08 2025
 
-@author: saout
-"""
+# Classif 0 : Paramétrages / Import des données / Features Engineering / Split Train/Test
 
-
+# Import Packages
 import os
 from pathlib import Path
 import matplotlib.pyplot as plt
@@ -16,26 +12,33 @@ from datetime import datetime
 from _plot_cat_vs_quants import plot_cat_vs_quants
 import pandas as pd
 from sklearn.model_selection import train_test_split
-from collections import Counter
-from imblearn.over_sampling import ADASYN
-from imblearn.under_sampling import TomekLinks
-from imblearn.combine import SMOTETomek
 import numpy as np
 
-
 #______________________________________________________________________________
 #______________________________________________________________________________
-# Entrees / sorties
+'''
+****** !!!! A MODIFIER Gestion Entrées / Sorties !!!! ******
+'''
 
 chemin_sortie = "C:\\Users\\saout\\Documents\\Data-Challenge-Apprentissage-Supervis-\\sorties"
+chemin_sortie = "C:\\Users\\saout\\Documents\\Data-Challenge-Apprentissage-Supervis-\\sorties"
+
+chemin_entree = Path(r"C:\Users\saout\Documents\Data-Challenge-Apprentissage-Supervis-\data")
+chemin_sortie = Path(r"C:\Users\saout\Documents\Data-Challenge-Apprentissage-Supervis-\sorties")
+
+# fichiers principaux
+TEST_CSV = chemin_entree / "test_data.csv"
+TRAIN_CSV = chemin_entree / "train_data.csv"
 
 def load_train():
-    fichier = Path(r"C:\Users\saout\Documents\Data-Challenge-Apprentissage-Supervis-\data\train_data.csv")
-    return pd.read_csv(fichier)
+    return pd.read_csv(TRAIN_CSV)
+
+def load_test():
+    return pd.read_csv(TEST_CSV)
 
 #______________________________________________________________________________
 #______________________________________________________________________________
-# Variables GLobales
+# Liste variables 
 
 RANDOM_STATE = 55
 
@@ -49,33 +52,32 @@ liste_var_categ = [   "is_repeated_guest",
                         "assigned_room_type", 
                         "deposit_type", 
                         "customer_type", 
-                        "arrival_date_month",
-                       
+                        "arrival_date_month",           
                         ]
 
 liste_var_quanti = 	[
         		'lead_time', 
                 'stays_in_weekend_nights', 
-        	  'stays_in_week_nights' ,
+        	    'stays_in_week_nights' ,
         	    'adults', 
         	    'children',
                 'babies',   
         	    'previous_cancellations',
-               'previous_bookings_not_canceled',   
+                'previous_bookings_not_canceled',   
         	    'booking_changes',  
                 'days_in_waiting_list', 
         	    'adr',
                 'required_car_parking_spaces', 
         	    'total_of_special_requests',
-                 "arrival_date_week_number",
-                        "arrival_date_day_of_month",
-                        "arrival_date_year",]
+                'arrival_date_week_number',
+                'arrival_date_day_of_month',
+                'arrival_date_year']
 
 target = "reservation_status"
-#______________________________________________________________________________
-#______________________________________________________________________________
 
-# Import fichiers
+#______________________________________________________________________________
+#______________________________________________________________________________
+# Import Données d'entrainement
 
 df = load_train()
 print(df.columns)
@@ -85,43 +87,36 @@ print(df.head())
 
 df.drop(columns=["Unnamed: 0"], axis=1, inplace=True)
 
-
-
-
 # Comptage des catégories variable cible
 counts = df[target].value_counts()
 
 # Graphique pie
 counts.plot.pie(autopct="%1.1f%%", figsize=(6,6), ylabel="")
 plt.show()
-#Check-Out (0), Canceled (1), ou No-Show (2)
 
 #______________________________________________________________________________
 #______________________________________________________________________________
-# features ingeniering
+# Features Engineering
 
 ### lead_time
 df["lead_time_tronq"] = df["lead_time"].clip(upper=df["lead_time"].quantile(0.99))
 df["lead_time_log"] = np.log1p(df["lead_time"])
 
-
-### market_segment et country
+### market_segment 
 df.loc[~df["market_segment"].isin(["Online TA","Offline TA/TO","Groups","Direct","Corporate"]), "market_segment"] = "Other"
 
+### country
 top_countries = ["PRT","GBR","FRA","ESP","DEU","ITA","IRL","BEL","BRA","USA","NLD","CHE","CN","AUT"]
 df.loc[~df["country"].isin(top_countries), "country"] = "Other"
 
-### ADR
+### adr
 df["party_size"] = df["adults"] + df["children"].fillna(0) + df["babies"].fillna(0)
 df["adr_per_person"] = df["adr"] / df["party_size"].replace(0, np.nan)
 df["adr_per_person"] = df["adr_per_person"].fillna(0)
 
-
 ### ratio annulation
 total_prev = df["previous_cancellations"] + df["previous_bookings_not_canceled"]
-df["prev_cancel_ratio"] = np.where(total_prev > 0,
-                                   df["previous_cancellations"] / total_prev,
-                                   0)
+df["prev_cancel_ratio"] = np.where(total_prev > 0,df["previous_cancellations"] / total_prev,0)
 
 ### arrival_date_month
 month_map = {
@@ -139,10 +134,10 @@ w = df["arrival_date_week_number"].astype(int).clip(1, 53)
 df["week_sin"] = np.sin(2 * np.pi * w / 52)
 df["week_cos"] = np.cos(2 * np.pi * w / 52)
 
-# 
+# room_changed
 df["room_changed"] = (df["reserved_room_type"] != df["assigned_room_type"]).astype(int)
 
-
+### Nouvelles liste de variables
 liste_var_categ = [
     "is_repeated_guest", "hotel", "meal", "country",
     "market_segment", "distribution_channel",
@@ -157,30 +152,25 @@ liste_var_quanti = [
     "stays_in_weekend_nights", "stays_in_week_nights",
     "adults", "children", "babies",
     "previous_cancellations", "previous_bookings_not_canceled",
-    "booking_changes", "days_in_waiting_list", #"adr",
-      "adr_per_person",
+    "booking_changes", "days_in_waiting_list",
+    "adr_per_person", #"adr",
     "required_car_parking_spaces", "total_of_special_requests",
     "arrival_date_day_of_month", "arrival_date_year",
     "month_sin", "month_cos", "week_sin", "week_cos",
     "party_size", "prev_cancel_ratio"
-]
+    ]
 
 #______________________________________________________________________________
 #______________________________________________________________________________
-# dummies categ + echantillonage train/test
+# Dummies variables categorielle + Echantillonage train/test
 
 df = df[liste_var_categ + liste_var_quanti + ["reservation_status"]]
 
-df_c = pd.get_dummies(data = df, \
-                         prefix = liste_var_categ, \
-                         columns = liste_var_categ)
+df_c = pd.get_dummies(data = df, prefix = liste_var_categ, columns = liste_var_categ)
 
+var = [x for x in df_c.columns if x != target] ## On enlève la variable cible
 
-var = [x for x in df_c.columns if x != target] ## Removing our target variable
-
-X_train, X_test, y_train, y_test = train_test_split(df_c[var], df[target],\
-                train_size = 0.8, random_state = RANDOM_STATE)
-
+X_train, X_test, y_train, y_test = train_test_split(df_c[var], df[target],train_size = 0.8, random_state = RANDOM_STATE)
 
 print(f'train samples: {len(X_train)}\ntest samples: {len(X_test)}')
 print(f'target proportion train : {sum(y_train)/len(y_train):.4f}')
@@ -189,11 +179,8 @@ print(f'target proportion test : {sum(y_test)/len(y_test):.4f}')
 
 
 
-
-
 '''
 df["country"].value_counts()
-
 
 df["country"].value_counts().head(10)
 (df["country"].value_counts(normalize=True) * 100).round(2)

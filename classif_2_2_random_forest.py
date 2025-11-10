@@ -1,9 +1,5 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Sep 30 15:40:32 2025
-
-@author: saout
-"""
+# Classif 2.2 : Random Forrest (entraienment & optimisation)
+#               Optimisation sur min_samples_split & max_depth et n_estimators
 
 import pandas as pd
 from sklearn.model_selection import train_test_split
@@ -30,8 +26,8 @@ for min_samples_split in min_samples_split_list:
                                    random_state = RANDOM_STATE).fit(X_train,y_train) 
     predictions_train = model.predict(X_train) ## The predicted values for the train dataset
     predictions_test = model.predict(X_test) ## The predicted values for the test dataset
-    f1_train = f1_score(predictions_train,y_train,average="macro")
-    f1_test = f1_score(predictions_test,y_test,average="macro")
+    f1_train = f1_score(predictions_train,y_train,average="weighted")
+    f1_test = f1_score(predictions_test,y_test,average="weighted")
     f1_list_train.append(f1_train)
     f1_list_test.append(f1_test)
 
@@ -57,8 +53,8 @@ for max_depth in max_depth_list:
                                    random_state = RANDOM_STATE).fit(X_train,y_train) 
     predictions_train = model.predict(X_train) ## The predicted values for the train dataset
     predictions_test = model.predict(X_test) ## The predicted values for the test dataset
-    f1_train = f1_score(y_train,predictions_train,average="macro")
-    f1_test = f1_score(y_test,predictions_test,average="macro")
+    f1_train = f1_score(y_train,predictions_train,average="weighted")
+    f1_test = f1_score(y_test,predictions_test,average="weighted")
     f1_list_train.append(f1_train)
     f1_list_test.append(f1_test)
 
@@ -84,8 +80,8 @@ for n_estimators in n_estimators_list:
                                    random_state = RANDOM_STATE).fit(X_train,y_train) 
     predictions_train = model.predict(X_train) ## The predicted values for the train dataset
     predictions_test = model.predict(X_test) ## The predicted values for the test dataset
-    f1_train = f1_score(y_train,predictions_train,average="macro")
-    f1_test = f1_score(y_test,predictions_test,average="macro")
+    f1_train = f1_score(y_train,predictions_train,average="weighted")
+    f1_test = f1_score(y_test,predictions_test,average="weighted")
     f1_list_train.append(f1_train)
     f1_list_test.append(f1_test)
 
@@ -98,13 +94,11 @@ plt.plot(f1_list_test)
 plt.legend(['Train','Test'])
 plt.show()
 
-
 #______________________________________________________________________________
 #______________________________________________________________________________
 # MODELE SELECTIONNE
 
-model_name = "classif_2_2_random_forest_mod"
-
+model_name = "classif_2_2_random_forest"
 
 random_forest_model = RandomForestClassifier(n_estimators = 200,
                                              max_depth = 64, 
@@ -112,9 +106,8 @@ random_forest_model = RandomForestClassifier(n_estimators = 200,
                                              min_samples_split = 2,
                                              min_samples_leaf = 1).fit(X_train,y_train)
 
-
-print(f"Metrics train:\n\tf1: {f1_score(y_train, random_forest_model.predict(X_train), average='macro'):.4f}\n"
-      f"Metrics test:\n\tf1 score: {f1_score(y_test, random_forest_model.predict(X_test), average='macro'):.4f}")
+print(f"Metrics train:\n\tf1: {f1_score(y_train, random_forest_model.predict(X_train), average='weighted'):.4f}\n"
+      f"Metrics test:\n\tf1 score: {f1_score(y_test, random_forest_model.predict(X_test), average='weighted'):.4f}")
 
 # === Prédictions ===
 
@@ -133,8 +126,16 @@ plt.show()
 
 # === Export Resultat ===
 
-f1, acc, name, _ = export_model_report_pdf(random_forest_model, X_test, y_test, pdf_path= chemin_sortie+"\\"+model_name+".pdf", 
+f1, acc, name, _ = export_model_report_pdf(random_forest_model, X_test, y_test, 
+                                           pdf_path= str(chemin_sortie / "classif_2_2_random_forest.pdf"), 
                                        title = "random_forest_model")
 
 print("f1:", f1, "| Modèle:", model_name)
 print("acc:", acc, "| Modèle:", model_name)
+
+
+
+
+
+
+

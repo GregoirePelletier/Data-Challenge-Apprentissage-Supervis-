@@ -1,10 +1,16 @@
+# Classif 3 : Groupe (Analyse Factorielle Multiple)
+
 import prince
 import joblib
 from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import KMeans
 import pandas as pd, numpy as np
-
 import os
+
+#______________________________________________________________________________
+#______________________________________________________________________________
+# Analyse Factorielle Multiple
+
 os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
 # TEMPORAIRE : tolère le doublon d’OpenMP (pas idéal mais pratique)
@@ -30,7 +36,6 @@ for c in cols_quanti:
     X[c] = pd.to_numeric(X[c], errors="coerce").fillna(0)
 for c in cols_quali:
     X[c] = X[c].astype("category")
-
 
 # 2) forcer TOUTES les quantitatives en float (pas int)
 #X[cols_quanti] = X[cols_quanti].apply(pd.to_numeric, errors="coerce").astype(float)
@@ -60,16 +65,15 @@ joblib.dump(scaler_famd, "scaler_famd.pkl")
 joblib.dump(km_route,    "km_route.pkl")
 joblib.dump(X_train.columns.tolist(), "ohe_columns.pkl")  # pour réaligner le test
 
-
 df.loc[Z_df.index, "cluster_famd"] = km_route.labels_.astype(int)
-
 
 print(pd.Series(km_route).value_counts().sort_index())
 print(pd.crosstab(df["cluster_famd"], df["country"].apply(lambda c: "Portugal" if c=="PRT" else "Etranger")))
 print(pd.crosstab(df["cluster_famd"], df["market_segment"]))
 
-
-
+#______________________________________________________________________________
+#______________________________________________________________________________
+# Analyse de la classification
 
 import matplotlib.pyplot as plt
 
@@ -101,7 +105,7 @@ plt.title("FAMD — projection individus (colorés par cluster)")
 plt.grid(alpha=0.2)
 plt.show()
 
-# analyse des groupes
+# Analyse des groupes
 
 quanti = ["adr_per_person","lead_time_log","stays_in_weekend_nights","stays_in_week_nights",
           "party_size","previous_cancellations","previous_bookings_not_canceled",
@@ -138,9 +142,9 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib import colors
 
-pdf_path = chemin_sortie+"\profil_clusters_FAMD_3.pdf"
+pdf_path = chemin_sortie / "profil_clusters_FAMD.pdf"
 styles = getSampleStyleSheet()
-doc = SimpleDocTemplate(pdf_path, pagesize=A4)
+doc = SimpleDocTemplate(str(pdf_path), pagesize=A4)
 story = []
 
 story.append(Paragraph("<b>Profil des clusters FAMD</b>", styles["Title"]))
@@ -176,13 +180,13 @@ t = Table([["Cluster","room_changed"]] + [[str(i), f"{tab_roomchg.loc[i]:.3f}"] 
 t.setStyle([("GRID",(0,0),(-1,-1),0.5,colors.grey)])
 story.append(t); story.append(Spacer(1,8))
 
-# Top 5 reserved_room_type par cluster 0/1 (si présents)
-for i in [c for c in [0.0,1.0] if i in ct_room.index]:
+for i in [c for c in [0.0, 1.0] if c in ct_room.index]:
     story.append(Paragraph(f"<b>Top 5 reserved_room_type — cluster {i}</b>", styles["Heading3"]))
     top5 = ct_room.loc[i].sort_values(ascending=False).head(5)
-    t = Table([[k, f"{100*v:.1f}%"] for k,v in top5.items()])
-    t.setStyle([("GRID",(0,0),(-1,-1),0.5,colors.grey)])
-    story.append(t); story.append(Spacer(1,6))
+    t = Table([[k, f"{100*v:.1f}%"] for k, v in top5.items()])
+    t.setStyle([("GRID", (0,0), (-1,-1), 0.5, colors.grey)])
+    story.append(t)
+    story.append(Spacer(1,6))
 
 # Top écarts
 story.append(Paragraph("<b>Top écarts absolus (moyennes) entre clusters 0 et 1</b>", styles["Heading2"]))
@@ -199,7 +203,7 @@ print(f"✅ PDF créé : {pdf_path}")
 
 
 
-
+'''
 #______________________________________________________________________________
 #______________________________________________________________________________
 # t-SNE
@@ -282,19 +286,11 @@ plt.legend()
 plt.grid(alpha=0.3)
 plt.tight_layout()
 plt.show()
+'''
 
 
 
-
-
-
-
-
-
-
-
-
-
+'''
 #______________________________________________________________________________
 #______________________________________________________________________________
 
@@ -305,4 +301,4 @@ emb = um.fit_transform(X_cluster_12)
 plt.figure(figsize=(6,5))
 plt.scatter(emb[:,0], emb[:,1], c=y_cluster_12.map({1:"royalblue",2:"tomato"}), s=8, alpha=0.5)
 plt.title("UMAP"); plt.tight_layout(); plt.show()
-
+'''

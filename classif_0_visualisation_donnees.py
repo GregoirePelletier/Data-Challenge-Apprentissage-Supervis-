@@ -1,18 +1,11 @@
 
-
-
+# Classif 0 : Visualisation des données
 
 #______________________________________________________________________________
 #______________________________________________________________________________
+#### VARIABLES CATÉGORIELLES ###
 
-# Visualisation des données
-
-###############################
-### VARIABLES CATÉGORIELLES ###
-###############################
-
-
-pdf_path = chemin_sortie+"\\classif_0_histplot_target_apres_fe.pdf"
+pdf_path = chemin_sortie+"\\classif_0_histplot_target.pdf"
 with PdfPages(pdf_path) as pdf:
     # (facultatif) métadonnées
     info = pdf.infodict()
@@ -52,13 +45,11 @@ df['deposit_type'].unique()
 eph = df.loc[ df['deposit_type']=='Non Refund',['deposit_type','reservation_status','customer_type','market_segment']]
 # --> Non Refund sont presque toutes annulées
 
-
-###############################
+#______________________________________________________________________________
+#______________________________________________________________________________
 ### VARIABLES QUANTITATIVES ###
-###############################
 
-              
-plot_cat_vs_quants(df, target, quants=liste_var_quanti, pdf_path=chemin_sortie+"\\classif_0_cat_vs_quants_apres_fe.pdf",
+plot_cat_vs_quants(df, target, quants=liste_var_quanti, pdf_path=chemin_sortie+"\\classif_0_cat_vs_quants.pdf",
                                order=None, palette="tab10", inner="quartile",
                                show_kde=True)
 
