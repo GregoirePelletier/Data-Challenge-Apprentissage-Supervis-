@@ -1,2 +1,0 @@
-n_estimators,max_depth,max_features,min_samples_split,min_samples_leaf,acc_train,acc_test,f1_train,f1_test,n_features_
-200,64,sqrt,2,1,0.9962078875938049,0.8718432510885341,0.9866250749454643,0.7125518331765942,324
