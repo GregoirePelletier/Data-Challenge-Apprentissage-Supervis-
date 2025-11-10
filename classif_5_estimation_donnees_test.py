@@ -10,7 +10,11 @@ from pathlib import Path
 ****** !!!! A MODIFIER Gestion Entrées / Sorties !!!! ******
 '''
 
-modele = final
+modele = random_forest_model
+# cas mélange de modele
+modele1 = random_forest_model
+modele2 = final
+
 nom_modele = "final_model" # nom du fichier de sortie
 
 OUT_CSV  = chemin_sortie / f"{nom_modele}.csv"
@@ -133,11 +137,18 @@ df_test_c = pd.get_dummies(data = df_test, prefix = liste_var_categ, columns = l
 df_test_c = df_test_c.set_index("row_id").reindex(columns=X_train.columns, fill_value=0)
 
 # 1 seul modèle
-y_pred = random_forest_model.predict_proba(df_test_c[var])
+y_pred = modele.predict_proba(df_test_c[var])
+
+submit = pd.DataFrame({
+    "row_id": df_test_c.index,                    # récupère l’index
+    "prediction": y_pred
+})
+
+save_submission(submit)
 
 # Mélange de modèles
-Prf   = random_forest_model.predict_proba(df_test_c[var])
-Plgbm = final.predict_proba(df_test_c[var])  # LGBM
+Prf   = modele1.predict_proba(df_test_c[var])
+Plgbm = modele2.predict_proba(df_test_c[var])  # LGBM
 
 alphas = [ 0.5]
 for a in alphas:

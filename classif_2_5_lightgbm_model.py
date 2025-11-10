@@ -147,7 +147,7 @@ joblib.dump(final, "lgbm_optuna_v2_best.pkl")
 
 #______________________________________________________________________________
 #______________________________________________________________________________
-# Mélange de modèles
+# Mélange de modèles : boucle sur les poids
 from sklearn.metrics import f1_score
 import numpy as np
 
